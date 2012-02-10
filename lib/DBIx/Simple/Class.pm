@@ -1,12 +1,17 @@
 package DBIx::Simple::Class;
 
-use 5.006;
+use 5.010
 use strict;
 use warnings;
 
+
+__END__
+
+=encoding utf8
+
 =head1 NAME
 
-DBIx::Simple::Class - The great new DBIx::Simple::Class!
+DBIx::Simple::Class - Advanced object construction for DBIx::Simple!
 
 =head1 VERSION
 
