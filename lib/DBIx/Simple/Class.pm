@@ -1,9 +1,12 @@
 package DBIx::Simple::Class;
 
-use 5.010
+use 5.0100;
 use strict;
 use warnings;
 
+
+
+1;
 
 __END__
 
@@ -109,8 +112,3 @@ under the terms of either: the GNU General Public License as published
 by the Free Software Foundation; or the Artistic License.
 
 See http://dev.perl.org/licenses/ for more information.
-
-
-=cut
-
-1; # End of DBIx::Simple::Class
