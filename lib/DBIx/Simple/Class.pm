@@ -2,7 +2,7 @@ package DBIx::Simple::Class;
 
 use 5.01000;
 use strict;
-use warnings FATAL => 'all';
+use warnings;
 use DBIx::Simple;
 use SQL::Abstract;
 use Params::Check;
@@ -50,17 +50,18 @@ sub new {
   my ($class, $fields) = _get_obj_args(@_);
   $fields = Params::Check::check($class->CHECKS, $fields)
     || croak(Params::Check::last_error());
-  my $self = {data => $fields};
+  my $self = {};
   bless $self, $class;
   $class->_make_field_attrs();
+  $self->data($fields);
   return $self;
 }
 
 sub _make_field_attrs {
   my $class = shift;
   (!ref $class)
-    || Carp::croak('Call this method as __PACKAGE__->make_field_attrs()');
-  my $code;
+    || croak('Call this method as __PACKAGE__->make_field_attrs()');
+  my $code = '';
   foreach my $column (@{$class->COLUMNS()}) {
     next if $class->can($column);    #careful: no redefine
     $code = "use strict;$/use warnings;$/use utf8;$/" unless $code;
@@ -75,19 +76,19 @@ sub $class\::$column {
     return \$self;
   }
   \$self->{data}{$column}
-    ||= \$self->CHECKS->{$column}{default}; #getting value
+    //= \$self->CHECKS->{$column}{default}; #getting value
 }
 
 SUB
 
   }
-  $code .= "$/1;" if $code;
+  $code .= "$/1;";
 
   #I know what I am doing. I think so... warn $code if $code;
-  if ($code && !eval $code) {    ##no critic (BuiltinFunctions::ProhibitStringyEval)
+  if (!eval $code) {    ##no critic (BuiltinFunctions::ProhibitStringyEval)
     croak($class . " compiler error: $/$code$/$@$/");
   }
-  elsif ($code && $DEBUG) {
+  if ($DEBUG) {
     carp($class . " generated accessors: $/$code$/$@$/");
   }
   return;
