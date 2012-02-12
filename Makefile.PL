@@ -1,4 +1,4 @@
-use 5.008;
+use 5.01000;
 use strict;
 use warnings;
 use ExtUtils::MakeMaker;
@@ -15,7 +15,7 @@ WriteMakefile(
     PREREQ_PM => {
         'Test::More' => 0,
         'DBIx::Simple' => 1.33,
-        'SQL::Abstract'=> 1,
+        'SQL::Abstract'=> 1.72,
     },
     dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
     clean               => { FILES => 'DBIx-Simple-Class-*' },

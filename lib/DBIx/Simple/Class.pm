@@ -1,17 +1,21 @@
 package DBIx::Simple::Class;
 
-use 5.0088;
+use 5.01000;
 use strict;
-use warnings;
+use warnings FATAL => 'all';
 use DBIx::Simple;
+use SQL::Abstract;
 use Params::Check;
 use Carp;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 $Params::Check::WARNINGS_FATAL = 1;
 $Params::Check::CALLER_DEPTH   = $Params::Check::CALLER_DEPTH + 1;
 
 #CONSTANTS
+
+my $DEBUG = 0;
+sub DEBUG { defined $_[1] ? ($DEBUG = $_[1]) : $DEBUG }
 
 #tablename
 sub TABLE {
@@ -23,13 +27,107 @@ sub COLUMNS {
   croak("You must define fields for your class: sub COLUMNS {['id','name','etc']}");
 }
 
+#used to validate params to field-setters
+my $_CHECKS = {};
+
+sub CHECKS {
+  croak("You must define your CHECKS subroutine that returns your private \$_CHECKS");
+}
+
 #default where
 sub WHERE { {} }
 
 my $DBIX;    #DBIx::Simple instance
 
+#ATTRIBUTES
 sub dbix {
   return ($DBIX ||= $_[1]) || croak('DBIx::Simple is not instantiated');
+}
+
+#METHODS
+
+sub new {
+  my ($class, $fields) = _get_obj_args(@_);
+  $fields = Params::Check::check($class->CHECKS, $fields)
+    || croak(Params::Check::last_error());
+  my $self = {data => $fields};
+  bless $self, $class;
+  $class->_make_field_attrs();
+  return $self;
+}
+
+sub _make_field_attrs {
+  my $class = shift;
+  (!ref $class)
+    || Carp::croak('Call this method as __PACKAGE__->make_field_attrs()');
+  my $code;
+  foreach my $column (@{$class->COLUMNS()}) {
+    next if $class->can($column);    #careful: no redefine
+    $code = "use strict;$/use warnings;$/use utf8;$/" unless $code;
+
+    #Carp::carp('Making sub ' . $column) if $DEBUG;
+    $code .= <<"SUB";
+sub $class\::$column {
+  my (\$self,\$value) = \@_;
+  if(defined \$value){ #setting value
+    \$self->{data}{$column} = \$self->_check($column=>\$value);
+    #make it chainable
+    return \$self;
+  }
+  \$self->{data}{$column}
+    ||= \$self->CHECKS->{$column}{default}; #getting value
+}
+
+SUB
+
+  }
+  $code .= "$/1;" if $code;
+
+  #I know what I am doing. I think so... warn $code if $code;
+  if ($code && !eval $code) {    ##no critic (BuiltinFunctions::ProhibitStringyEval)
+    croak($class . " compiler error: $/$code$/$@$/");
+  }
+  elsif ($code && $DEBUG) {
+    carp($class . " generated accessors: $/$code$/$@$/");
+  }
+  return;
+}
+
+#conveninece for getting key/vaule arguments
+sub _get_args {
+  return ref($_[0]) ? shift() : (@_ % 2) ? shift() : {@_};
+}
+sub _get_obj_args { return (shift, _get_args(@_)); }
+
+sub _check {
+  my ($self, $key, $value) = @_;
+  my $args_out =
+    Params::Check::check({$key => $self->CHECKS->{$key} || {}}, {$key => $value});
+  return $args_out->{$key};
+}
+
+#fieldvalues HASHREF
+sub data {
+  my ($self, $args) = _get_obj_args(@_);
+  if (ref $args && keys %$args) {
+    for my $field (keys %$args) {
+      unless (grep { $field eq $_ } @{$self->COLUMNS()}) {
+        Carp::cluck(
+          "There is not such field $field in table " . $self->TABLE . '! Skipping...')
+          if $DEBUG;
+        next;
+      }
+      $self->$field($args->{$field});
+    }
+  }
+
+  #a key
+  elsif ($args && (!ref $args)) {
+    return $self->$args;
+  }
+
+  #they want all that we touched in $self->{data}
+  return $self->{data};
 }
 
 1;
@@ -45,7 +143,7 @@ DBIx::Simple::Class - Advanced object construction for DBIx::Simple!
 =head1 DESCRIPTION
 
 This module is writen to replace the base model class in the MYDLjE project 
-on github, but can be used independently as well.
+on github, but can be used independently as well. 
 
 The class provides some useful methods which simplify representing rows from 
 tables as Perl objects. It is not intended to be a full featured ORM at all. 
@@ -70,15 +168,13 @@ That's it.
   sub COLUMNS {[qw(id group_id login_name login_password first_name last_name)]}
 
   #used to validate params to field-setters
-  my $COLUMN_TYPES = {
-    id => { allow => qr/^\d+$x },
-    group_id => { allow => qr/^\d+$x },
+  my $_CHECKS = {
+    id => { allow => qr/^\d+$/x },
+    group_id => { allow => qr/^\d+$/x },
     login_name => {required => 1, allow => qr/^\p{IsAlnum}{4,12}$/x},
     #...
   };
-  sub COLUMN_TYPES {
-    return $_[1] ? $COLUMN_TYPES->{$_[1]} : $COLUMN_TYPES;
-  }
+  sub CHECKS{$_CHECKS}
   1;#end of My::Model::AdminUser
 
   #2. in as startup script or subroutine  
@@ -107,6 +203,12 @@ That's it.
 
 
 =head1 CONSTANTS
+
+=head2 DEBUG
+
+Flag to enable debug warnings.
+
+    DBIx::Simple::Class->DEBUG(1);
 
 =head2 TABLE
 
@@ -141,6 +243,13 @@ and when saving object data.
   # in select()
   $self->data(
     $self->dbix->select(TABLE, COLUMNS, WHERE)->hash);
+
+=head2 CHECKS
+
+You B<must> define this soubroutine in your class and put in it your
+C<$_CHECKS>. That's all.
+
+  sub CHECKS{$_CHECKS}
 
 =head1 ATTRIBUTES
 
@@ -244,7 +353,8 @@ L<http://search.cpan.org/dist/DBIx-Simple-Class/>
 
 =head1 SEE ALSO
 
-L<DBIx::Simple>, <SQL::Abstract>,
+L<DBIx::Simple>, <SQL::Abstract>, L<Params::Check>
+L<https://github.com/kberov/MYDLjE>
 
 
 =head1 LICENSE AND COPYRIGHT
