@@ -1,4 +1,4 @@
-use 5.01000;
+use 5.010;
 use strict;
 use warnings;
 use ExtUtils::MakeMaker;
@@ -8,9 +8,7 @@ WriteMakefile(
     AUTHOR              => q{Красимир Беров <berov@cpan.org>},
     VERSION_FROM        => 'lib/DBIx/Simple/Class.pm',
     ABSTRACT_FROM       => 'lib/DBIx/Simple/Class.pm',
-    ($ExtUtils::MakeMaker::VERSION >= 6.3002
-      ? ('LICENSE'=> 'perl')
-      : ()),
+    LICENSE             => 'perl',
     PL_FILES            => {},
     PREREQ_PM => {
         'Test::More' => 0,

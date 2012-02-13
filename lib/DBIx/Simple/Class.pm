@@ -1,6 +1,6 @@
 package DBIx::Simple::Class;
 
-use 5.01000;
+use 5.010;
 use strict;
 use warnings;
 use DBIx::Simple;
@@ -8,7 +8,7 @@ use SQL::Abstract;
 use Params::Check;
 use Carp;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 $Params::Check::WARNINGS_FATAL = 1;
 $Params::Check::CALLER_DEPTH   = $Params::Check::CALLER_DEPTH + 1;
 
@@ -36,6 +36,8 @@ sub CHECKS {
 
 #default where
 sub WHERE { {} }
+
+sub PRIMARY_KEY {'id'}
 
 my $DBIX;    #DBIx::Simple instance
 
@@ -131,6 +133,62 @@ sub data {
   return $self->{data};
 }
 
+sub save {
+  my ($self, $data) = _get_obj_args(@_);
+
+  #allow data to be passed directly and overwrite current data
+  if (keys %$data) { $data = $self->data($data); }
+  my ($pk, $table) = ($self->PRIMARY_KEY, $self->TABLE);
+  local $Carp::MaxArgLen = 0;
+  if (!defined $self->$pk) {
+
+    #TODO: see how to behave with different DBs that do not provide AUTOINCREMENT
+    #or do not (auto)generate PKs
+    delete $data->{$pk} if exists $data->{$pk};
+    $self->insert();
+    $self->$pk($self->dbix->last_insert_id(undef, undef, $table, $pk));
+    return $self->$pk;
+  }
+  else {
+    return $self->update();
+  }
+  return;
+}
+
+
+sub update {
+  my ($self) = @_;
+  my $pk = $self->PRIMARY_KEY;
+  if ($INC{'SQL/Abstract.pm'}) {
+    return $self->dbix->update($self->TABLE, $self->{data},
+      {$pk => $self->{data}{$pk}});
+  }
+  else {
+    my $SET = join(', ', map {"$/`$_`=?"} @{$self->COLUMNS});
+    my $SQL = "UPDATE `${$self->TABLE}` $/SET $SET $/WHERE `$pk`=$self->{data}{$pk}";
+    carp($SQL) if $DEBUG;
+    return $self->dbix->query($SQL, @{$self->{data}{@{$self->COLUMNS}}});
+  }
+}
+
+sub insert {
+  my ($self) = @_;
+  my $table = $self->TABLE;
+  if ($INC{'SQL/Abstract.pm'}) {
+    $self->dbix->insert("`$table`", $self->{data});
+  }
+  else {
+    my @columns = @{$self->COLUMNS};
+    my $SQL =
+        "INSERT INTO `$table` ("
+      . join(',', map {"`$_`"} @columns)
+      . ') VALUES('
+      . join(',', map {'?'} @columns) . ')';
+    carp($SQL) if $DEBUG;
+    $self->dbix->query($SQL, @{$self->{data}{@columns}});
+  }
+}
+
 1;
 
 __END__
@@ -143,8 +201,8 @@ DBIx::Simple::Class - Advanced object construction for DBIx::Simple!
 
 =head1 DESCRIPTION
 
-This module is writen to replace the base model class in the MYDLjE project 
-on github, but can be used independently as well. 
+This module is writen to replace most of the abstraction from the base model class 
+in the MYDLjE project, on github, but can be used independently as well. 
 
 The class provides some useful methods which simplify representing rows from 
 tables as Perl objects. It is not intended to be a full featured ORM at all. 
@@ -164,6 +222,7 @@ That's it.
 
   #sql to be used as table
   sub TABLE { 'users' }
+  #alternative syntax: use constant TABLE =>'users';
   sub WHERE { {group_id => 1 } }#admin group
   
   sub COLUMNS {[qw(id group_id login_name login_password first_name last_name)]}
@@ -238,7 +297,7 @@ This constant is optional.
 You B<must> define it in your subclass. 
 It must return an ARRAYREF with table columns to which the data is written.
 It is used  internally in L</select> when retreiving a row from the database 
-and when saving object data.
+and when saving object data. This list is also used to generate specific getters and setters for each data-field.
 
   sub COLUMNS { [qw(id cid user_id tstamp sessiondata)] };
   # in select()

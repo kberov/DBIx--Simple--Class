@@ -1,6 +1,6 @@
 #!perl -T
 
-use 5.008;
+use 5.010;
 use strict;
 use warnings;
 use utf8;
@@ -53,14 +53,6 @@ T
 
 $dbix->query($groups_table);
 $dbix->query($users_table);
-
-{
-
-  package My::Group;
-
-
-  1;
-}
 
 {
 
@@ -179,14 +171,12 @@ is(ref $user->data, 'HASH', 'disabled via data is valid');
   package My::Group;
   use base qw(DBIx::Simple::Class);
 
-  sub TABLE {'groups'}
-  my $columns = [qw(id group foo-bar)];
-  sub COLUMNS {$columns}
-  sub WHERE   { {} }
+  use constant TABLE   => 'groups';
+  use constant COLUMNS => [qw(id group foo-bar)];
+  use constant WHERE   => {};
 
   #See Params::Check
-  my $_CHECKS = {};
-  sub CHECKS {$_CHECKS}
+  use constant CHECKS => {};
   1;
 }
 my $group;
@@ -212,9 +202,15 @@ ok(My::Group->can('id'),    'can id');
 ok(My::Group->can('group'), 'can group');
 My::Group->DEBUG(1);
 ok($group = My::Group->new);
-ok($group->id(1));
+ok($group->data(1));
 ok($group->data('lala' => 1));
 is_deeply($group->data(), {id => 1}, '"There is not such field lala" ok');
 My::Group->DEBUG(0);
+
+#insert
+My::Group->CHECKS->{id}    = {allow => qr/^\d+$/};
+My::Group->CHECKS->{group} = {allow => qr/^\p{IsAlnum}{3,12}$/x};
+ok($group = My::Group->new(group => 'admin'));
+is($group->save, 1, 'ok inserted group:' . $group->id);
 done_testing();
 
