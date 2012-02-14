@@ -219,7 +219,8 @@ ok($group = $dbix->query('select*from groups where id=1')->object('My::Group'));
 is($group->group, 'admins', 'group name is equal');
 my $g2;
 ok($g2 = My::Group->new(group => 'guests'));
-is(($g2->save(group => 'users')&&$g2->group),'users', 'new group "' . $g2->group . '" with params to save ok');
+is(($g2->save(group => 'users') && $g2->group),
+  'users', 'new group "' . $g2->group . '" with params to save ok');
 
 is($user->group_id($group->id)->group_id, 1, 'added user to group ok');
 is($user->save,                           1, 'user inserted ok');
@@ -230,6 +231,12 @@ ok(
     ->object('My::User'),
   'user retrieved from database ok'
 );
+
+# if (My::User->dbix->abstract) {
+  # use Data::Dumper;
+  # warn Dumper($user->id, My::User->select(id => $user->id),);
+  # is_deeply(My::User->select(id => $user->id)->data, $user->data, 'select works!');
+# }
 
 done_testing();
 

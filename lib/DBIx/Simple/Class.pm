@@ -5,8 +5,6 @@ use strict;
 use warnings;
 use DBIx::Simple;
 use Params::Check;
-use Data::Dumper;
-
 use Carp;
 
 our $VERSION = '0.04';
@@ -64,6 +62,12 @@ sub new_from_dbix_simple {
   $class->_make_field_attrs()
     unless $DBIx::Simple::Class::_attributes_made->{$class};
   return bless {data => $result->hash, new_from_dbix_simple => 1}, $class;
+}
+
+sub select {
+  my ($class, $where) = _get_obj_args(@_);
+  return $class->dbix->select($class->TABLE, $class->COLUMNS,
+    {%{$class->WHERE}, %$where})->object($class);
 }
 
 our $_attributes_made = {};
@@ -167,7 +171,6 @@ sub update {
   my $SQL =
     'UPDATE `' . $self->TABLE . "` $/SET $SET $/WHERE `$pk`='$self->{data}{$pk}'";
 
-  #carp($SQL.Data::Dumper->Dump([$self->{data}],['VALUES'])) if $DEBUG;
   return $self->dbix->query($SQL, (map { $self->{data}{$_} } @columns));
 }
 
@@ -180,8 +183,7 @@ sub insert {
     . ') VALUES('
     . join(',', map {'?'} @columns) . ')';
 
-  #carp($SQL .Data::Dumper->Dump([$self->{data}],['data'])) if $DEBUG;
-  $self->dbix->query($SQL, @{$self->{data}{@columns}});
+  $self->dbix->query($SQL, (map { $self->{data}{$_} } @columns));
   $self->$pk($self->dbix->last_insert_id(undef, undef, $table, $pk));
   return $self->$pk;
 }
@@ -361,6 +363,18 @@ as column names.
 A constructor called in L<DBIx::Simple/object> and 
 <DBIx::Simple/objects>. Basically makes the same as C<new()> without 
 checking the validity of the field values.
+
+=head2 select
+
+Instantiates an object from a saved in the database row by constructing and 
+executing an SQL query based on the parameters. 
+These parameters are used to construct the C<WHERE> clause for the SQL C<SELECT> 
+statement. The API is the same as for L<DBIx::Simple/select> or 
+L<SQL::Abstract/select> which is used internally. Prepends the L</WHERE> 
+clause defined by you to the parameters. If a row is found puts it in L</data>. 
+Returns C<$self>.
+
+  my $user = MYDLjE::M::User->select(id => $user_id);
 
 
 =head2 data
