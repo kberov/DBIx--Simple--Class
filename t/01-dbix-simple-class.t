@@ -119,7 +119,11 @@ like(
   qr/Call this method as/,
   '_make_field_attrs() ok'
 );
-
+is(
+  My::User->_make_field_attrs(),
+  $DBIx::Simple::Class::_attributes_made->{'My::User'},
+  'if (eval $code) in _make_field_attrs() ok'
+);
 isa_ok(ref($user), $DSCLASS);
 
 #defaults
@@ -180,12 +184,16 @@ is(ref $user->data, 'HASH', 'disabled via data is valid');
   1;
 }
 my $group;
+
 like(
   (eval { My::Group->new() }, $@),
   qr/Illegal declaration of subroutine/,
   '"Illegal declaration of subroutine" ok'
 );
+
+
 delete My::Group->COLUMNS->[-1];
+
 is_deeply(My::Group->COLUMNS, [qw(id group)]);
 
 like(
@@ -193,6 +201,7 @@ like(
   qr/is not a valid key for/,
   '"is not a valid key for" ok'
 );
+My::Group->DEBUG(1);
 like(
   (eval { My::Group->new->data('lala') }, $@),
   qr/Can't locate object method "lala" via package "My::Group"/,
@@ -200,7 +209,6 @@ like(
 );
 ok(My::Group->can('id'),    'can id');
 ok(My::Group->can('group'), 'can group');
-My::Group->DEBUG(1);
 ok($group = My::Group->new);
 ok($group->id(1));
 ok($group->data('lala' => 1));
@@ -232,11 +240,11 @@ ok(
   'user retrieved from database ok'
 );
 
-# if (My::User->dbix->abstract) {
-  # use Data::Dumper;
-  # warn Dumper($user->id, My::User->select(id => $user->id),);
-  # is_deeply(My::User->select(id => $user->id)->data, $user->data, 'select works!');
-# }
+if (eval { My::User->dbix->abstract }) {
+  is_deeply(My::User->select(id => $user->id, disabled => 0)->data,
+    $user->data, 'select works!');
+  is_deeply(My::User->select(id => $user->id)->data, undef, 'wrong select works!');
+}
 
 done_testing();
 

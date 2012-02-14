@@ -7,7 +7,7 @@ use DBIx::Simple;
 use Params::Check;
 use Carp;
 
-our $VERSION = '0.04';
+our $VERSION = '0.5';
 $Params::Check::WARNINGS_FATAL = 1;
 $Params::Check::CALLER_DEPTH   = $Params::Check::CALLER_DEPTH + 1;
 
@@ -100,7 +100,7 @@ SUB
   $code .= "$/1;";
 
   #I know what I am doing. I think so...
-  if (!eval $code) {    ##no critic (BuiltinFunctions::ProhibitStringyEval)
+  unless (eval $code) {    ##no critic (BuiltinFunctions::ProhibitStringyEval)
     croak($class . " compiler error: $/$code$/$@$/");
   }
   if ($DEBUG) {
