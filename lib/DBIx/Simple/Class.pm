@@ -188,6 +188,20 @@ sub insert {
 
 1;
 
+
+# put a comment before __END__ marker so you can generate/use
+# additional perl tags using exuberant ctags.
+# example ctags filters to put in your ~/.ctags file:
+#--regex-perl=/^\s*?use\s+(\w+[\w\:]*?\w*?)/\1/u,use,uses/
+#--regex-perl=/^\s*?require\s+(\w+[\w\:]*?\w*?)/\1/r,require,requires/
+#--regex-perl=/^\s*?has\s+['"]?(\w+)['"]?/\1/a,attribute,attributes/
+#--regex-perl=/^\s*?\*(\w+)\s*?=/\1/a,aliase,aliases/
+#--regex-perl=/->helper\(\s?['"]?(\w+)['"]?/\1/h,helper,helpers/
+#--regex-perl=/^\s*?our\s*?[\$@%](\w+)/\1/o,our,ours/
+#--regex-perl=/^=head1\s+(.+)/\1/p,pod,Plain Old Documentation/
+#--regex-perl=/^=head2\s+(.+)/-- \1/p,pod,Plain Old Documentation/
+#--regex-perl=/^=head[3-5]\s+(.+)/---- \1/p,pod,Plain Old Documentation/
+
 __END__
 
 =encoding utf8
@@ -232,7 +246,7 @@ Last but not least, this module has no other non-CORE dependencies besides DBIx:
   sub CHECKS{$_CHECKS}
   1;#end of My::Model::AdminUser
 
-  #2. In as startup script or subroutine
+  #2. In a startup script or subroutine
   $app->{dbix} = DBIx::Simple->connect(...);
   #and/or
   DBIx::Simple::Class->dbix( $app->{dbix} );
@@ -259,21 +273,19 @@ Last but not least, this module has no other non-CORE dependencies besides DBIx:
   print "new user has id:".$user->id;
   #...
   #select many
+  my $class = 'My::Model::AdminUser';
   my @admins = $dbix->select(
-    My::Model::AdminUser->TABLE,
-    My::Model::AdminUser->COLUMNS,
-    My::Model::AdminUser->WHERE
-  )->objects(My::Model::AdminUser);
-
+    $class->TABLE,
+    $class->COLUMNS,
+    $class->WHERE
+  )->objects($class);
+  #or
+  my @admins = $dbix->query(
+    $VERY_COMPLEX_SQL, @bind_variables
+  )->objects($class);
 
 
 =head1 CONSTANTS
-
-=head2 DEBUG
-
-Flag to enable debug warnings. Influencess all DBIx::Simple::Class subclasses.
-
-    DBIx::Simple::Class->DEBUG(1);
 
 =head2 TABLE
 
@@ -343,33 +355,37 @@ to the current DBIx::Simple instance (with L<SQL::Abstract> support eventually :
   #or
   __PACKAGE__->dbix->query(...);#same instance
 
+=head2 DEBUG
+
+Flag to enable debug warnings. Influencess all DBIx::Simple::Class subclasses.
+
+    DBIx::Simple::Class->DEBUG(1);
 
 =head1 METHODS
 
 =head2 new
 
-The constructor.  
+Constructor.  
 Generates getters and setters (if needed) for the fields described in 
 L</COLUMNS>. Sets the eventually passed parameters as fields if they exists 
 as column names.
 
-  #Restore user object from sessiondata
-  if($self->sessiondata->{user_data}){
-    $self->user(My::User->new($self->sessiondata->{user_data}));
-  }
+My::User->new($session->{user_data});
 
 =head2 new_from_dbix_simple
 
 A constructor called in L<DBIx::Simple/object> and 
 L<DBIx::Simple/objects>. Basically makes the same as C<new()> without 
-checking the validity of the field values.
+checking the validity of the field values since they come from the 
+database and should be valid. See L<DBIx::Simple/Advanced_object_construction>.
 
   #This should be quicker than DBIx::Simple::Result::RowObject
+  my $class = 'My::Model::AdminUser';
   my @admins = $dbix->select(
-    My::Model::AdminUser->TABLE,
-    My::Model::AdminUser->COLUMNS,
-    My::Model::AdminUser->WHERE
-  )->objects(My::Model::AdminUser);
+    $class->TABLE,
+    $class->COLUMNS,
+    $class->WHERE
+  )->objects($class);
 
 =head2 select
 
@@ -380,7 +396,7 @@ executing an SQL query based on the parameters.
 These parameters are used to construct the C<WHERE> clause for the SQL C<SELECT> 
 statement. Prepends the L</WHERE> clause defined by you to the parameters. 
 If a row is found puts it in L</data>. 
-Returns C<$self>.
+Returns an instance of your class on success or C<undef> otherwise.
 
   my $user = MYDLjE::M::User->select(id => $user_id);
 
@@ -398,14 +414,14 @@ Returns a HASHREF - name/value pairs of the fields.
 =head2 save
 
 DWIM saver. If the object is fresh 
-( not instantiated via L</new_from_dbix_simple> ) prepares and 
+( not instantiated via L</new_from_dbix_simple> and L</select>) prepares and 
 executes an C<INSERT> statment, otherwise preforms an C<UPDATE>. 
 L</TABLE> and L</COLUMNS> are used to construct the SQL. 
 L</data> is stored as a row in L</TABLE>.
 
-    my $note = MyNote->new(title=>'My Title', description =>'This is a great story.');
-    #do something more...
-    $note->save;
+  my $note = MyNote->new(title=>'My Title', description =>'This is a great story.');
+  #do something more...
+  $note->save;
 
 =head2 insert
 
@@ -434,7 +450,8 @@ retreived from the database. Returns true on success.
 
 =head1 BUGS
 
-Please report any bugs or feature requests to https://github.com/kberov/DBIx--Simple--Class/issues. 
+Please report any bugs or feature requests to 
+L<https://github.com/kberov/DBIx--Simple--Class/issues>. 
 I will be notified, and then you'll
 automatically be notified of progress on your bug as I make changes.
 
@@ -444,7 +461,6 @@ automatically be notified of progress on your bug as I make changes.
 You can find documentation for this module with the perldoc command.
 
     perldoc DBIx::Simple::Class
-
 
 You can also look for information at:
 
