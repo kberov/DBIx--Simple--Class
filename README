@@ -8,6 +8,9 @@ To install this module, run the following commands:
 	make
 	make test
 	make install
+
+DESCRIPTION
+
 This module is writen to replace most of the abstraction stuff from the base 
 model class in the MYDLjE project on github, but can be used independently as well. 
 
