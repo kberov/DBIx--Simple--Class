@@ -202,7 +202,7 @@ ok(My::Group->can('id'),    'can id');
 ok(My::Group->can('group'), 'can group');
 My::Group->DEBUG(1);
 ok($group = My::Group->new);
-ok($group->data(1));
+ok($group->id(1));
 ok($group->data('lala' => 1));
 is_deeply($group->data(), {id => 1}, '"There is not such field lala" ok');
 My::Group->DEBUG(0);
@@ -211,6 +211,25 @@ My::Group->DEBUG(0);
 My::Group->CHECKS->{id}    = {allow => qr/^\d+$/};
 My::Group->CHECKS->{group} = {allow => qr/^\p{IsAlnum}{3,12}$/x};
 ok($group = My::Group->new(group => 'admin'));
-is($group->save, 1, 'ok inserted group:' . $group->id);
+is((eval { $group->save } || $@), 1, 'ok inserted group:' . $group->id);
+
+#update
+is(($group->group('admins')->save && $group->id), 1, 'ok updated group:' . $group->id);
+ok($group = $dbix->query('select*from groups where id=1')->object('My::Group'));
+is($group->group, 'admins', 'group name is equal');
+my $g2;
+ok($g2 = My::Group->new(group => 'guests'));
+is(($g2->save(group => 'users')&&$g2->group),'users', 'new group "' . $g2->group . '" with params to save ok');
+
+is($user->group_id($group->id)->group_id, 1, 'added user to group ok');
+is($user->save,                           1, 'user inserted ok');
+delete $DBIx::Simple::Class::_attributes_made->{'My::User'};
+ok(
+  $user =
+    $dbix->query('select*from users where login_name=?', $user->login_name)
+    ->object('My::User'),
+  'user retrieved from database ok'
+);
+
 done_testing();
 

@@ -13,7 +13,6 @@ WriteMakefile(
     PREREQ_PM => {
         'Test::More' => 0,
         'DBIx::Simple' => 1.33,
-        'SQL::Abstract'=> 1.72,
     },
     dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
     clean               => { FILES => 'DBIx-Simple-Class-*' },
