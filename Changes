@@ -1,3 +1,15 @@
+commit 1bc0c9e2374f52602cef3d503f82096f6ca1ee8b
+Author: Krasimir Berov <k.berov@gmail.com>
+Date:   Tue Feb 14 18:36:32 2012 +0200
+
+    Version 0.51. Improved documentation. Optimised new_from_dbix_simple()
+
+commit 6560519363f1c5757eca2970bc7a778c20210f3a
+Author: Krasimir Berov <k.berov@gmail.com>
+Date:   Tue Feb 14 13:10:08 2012 +0200
+
+    Releasing Version 0.5
+
 commit c084dfdf81abe77317c8570c1c6a448d2e94ad09
 Author: Krasimir Berov <k.berov@gmail.com>
 Date:   Tue Feb 14 13:03:50 2012 +0200
