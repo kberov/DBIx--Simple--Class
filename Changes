@@ -1,5 +1,92 @@
-Revision history for DBIx-Simple-Class
+commit c084dfdf81abe77317c8570c1c6a448d2e94ad09
+Author: Krasimir Berov <k.berov@gmail.com>
+Date:   Tue Feb 14 13:03:50 2012 +0200
 
-0.01    Date/time
-        First version, released on an unsuspecting world.
+    I think we are ready for CPAN. Total test coverage:95.3%.
 
+commit 20d13c714b0908d5806bd17c571d164c7d9316fe
+Author: Krasimir Berov <k.berov@gmail.com>
+Date:   Tue Feb 14 04:44:41 2012 +0200
+
+    re-adding select()...
+
+commit bafa12b010d4163876e4733f79422e363e997765
+Author: Krasimir Berov <k.berov@gmail.com>
+Date:   Tue Feb 14 03:22:50 2012 +0200
+
+    updated again
+
+commit 94bcaa9c5d1af994ed102e933d59496e1746b452
+Author: Krasimir Berov <k.berov@gmail.com>
+Date:   Tue Feb 14 03:20:45 2012 +0200
+
+    Updated README
+
+commit b7a0553ce90fc2a719a38681f37f2074a78b234c
+Author: Krasimir Berov <k.berov@gmail.com>
+Date:   Tue Feb 14 03:07:36 2012 +0200
+
+    0.04
+    * No SQL::Abstract dependency.
+    * Optimized constructors.
+    * Optimised _make_field_attrs().
+    * Optimized save().
+    * Added update() and insert().
+    * Updated POD.
+    * 94.4% total test coverage.
+
+commit 7e9642588bf1a7a4f653343323280656400c0c86
+Author: Krasimir Berov <k.berov@gmail.com>
+Date:   Mon Feb 13 18:59:37 2012 +0200
+
+    Added methods "insert" and "update" to make SQL::Abstarct dependency optional.
+
+commit 1b9ad8486bcd5910956adf6b7ee3996f270217ea
+Author: Krasimir Berov <k.berov@gmail.com>
+Date:   Mon Feb 13 01:33:02 2012 +0200
+
+    92.7% test coverage!
+
+commit 16987abc3ee6be1338db56520349c96bdf0160da
+Author: Krasimir Berov <k.berov@gmail.com>
+Date:   Sun Feb 12 22:00:25 2012 +0200
+
+    1. We require now perl 5.10
+    2. Porting and rewriting functionality from MYDLjE::M
+    3. Writing tests
+
+commit 8b1ccaf9b2402e8f05ed657dc38f12e0766fecbc
+Author: Krasimir Berov <k.berov@gmail.com>
+Date:   Sun Feb 12 02:15:53 2012 +0200
+
+    Added SQL::Abstract as dependency.
+
+commit 2a9a87ee9c9e654f1eada35154dc61a971cc5ae0
+Author: Krasimir Berov <k.berov@gmail.com>
+Date:   Sun Feb 12 02:14:50 2012 +0200
+
+    Written POD.
+
+commit 680ab8639f88c11542b92d8f467299cedd4c8dfa
+Author: Krasimir Berov <k.berov@gmail.com>
+Date:   Fri Feb 10 03:13:57 2012 +0200
+
+    00-load.t ....... ok
+
+commit 8ba51d763c3210281136102d8704a9775a07c7f6
+Author: Krasimir Berov <k.berov@gmail.com>
+Date:   Fri Feb 10 03:07:25 2012 +0200
+
+    Advanced object construction for DBIx::Simple!
+
+commit ed168fe23cea43fab24ea92b0701b8433b94c920
+Author: Krasimir Berov <k.berov@gmail.com>
+Date:   Fri Feb 10 02:49:27 2012 +0200
+
+    stub by Module::Starter
+
+commit 5ff3d0f9d9c507be3d38dd641c572ad490530d97
+Author: Berov <berov@U165.(none)>
+Date:   Fri Feb 10 02:35:40 2012 +0200
+
+    first commit
