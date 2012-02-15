@@ -5,9 +5,10 @@ use strict;
 use warnings;
 use DBIx::Simple;
 use Params::Check;
+use List::Util qw(first);
 use Carp;
 
-our $VERSION = '0.51';
+our $VERSION = '0.52';
 $Params::Check::WARNINGS_FATAL = 1;
 $Params::Check::CALLER_DEPTH   = $Params::Check::CALLER_DEPTH + 1;
 
@@ -18,19 +19,21 @@ sub DEBUG { defined $_[1] ? ($DEBUG = $_[1]) : $DEBUG }
 
 #tablename
 sub TABLE {
-  croak("You must define a tablename for your class: sub TABLE {'tablename'}");
+  croak("You must define a tablename for your class: sub TABLE {'tablename'}!");
 }
 
 #table columns
 sub COLUMNS {
-  croak("You must define fields for your class: sub COLUMNS {['id','name','etc']}");
+  croak("You must define fields for your class: sub COLUMNS {['id','name','etc']}!");
 }
 
 #used to validate params to field-setters
 my $_CHECKS = {};
 
 sub CHECKS {
-  croak("You must define your CHECKS subroutine that returns your private \$_CHECKS");
+  croak(
+    "You must define your CHECKS subroutine that returns your private \$_CHECKS HASHREF!"
+  );
 }
 
 #default where
@@ -68,28 +71,34 @@ sub select {
     {%{$class->WHERE}, %$where})->object($class);
 }
 
+sub query {
+  my $class = shift;
+  return $class->dbix->query(@_)->object($class);
+}
+
 our $_attributes_made = {};
 
 sub _make_field_attrs {
   my $class = shift;
   (!ref $class)
-    || croak('Call this method as __PACKAGE__->make_field_attrs()');
+    || croak("Call this method as $class->make_field_attrs()");
   my $code = '';
-  foreach my $column (@{$class->COLUMNS()}) {
-    next if $class->can($column);    #careful: no redefine
+  foreach (@{$class->COLUMNS}) {
+    croak("You can not use '$_' as a column name since it is already defined in "
+        . __PACKAGE__ . '.')
+      if __PACKAGE__->can($_);
+    next if $class->can($_);    #careful: no redefine
     $code = "use strict;$/use warnings;$/use utf8;$/" unless $code;
-
-    #Carp::carp('Making sub ' . $column) if $DEBUG;
     $code .= <<"SUB";
-sub $class\::$column {
+sub $class\::$_ {
   my (\$self,\$value) = \@_;
   if(defined \$value){ #setting value
-    \$self->{data}{$column} = \$self->_check($column=>\$value);
+    \$self->{data}{$_} = \$self->_check($_=>\$value);
     #make it chainable
     return \$self;
   }
-  \$self->{data}{$column}
-    //= \$self->CHECKS->{$column}{default}; #getting value
+  \$self->{data}{$_}
+    //= \$self->CHECKS->{$_}{default}; #getting value
 }
 
 SUB
@@ -125,12 +134,15 @@ sub data {
   my ($self, $args) = _get_obj_args(@_);
   if (ref $args && keys %$args) {
     for my $field (keys %$args) {
-      unless (grep { $field eq $_ } @{$self->COLUMNS()}) {
+      unless (first { $field eq $_ } @{$self->COLUMNS()}) {
         Carp::cluck(
           "There is not such field $field in table " . $self->TABLE . '! Skipping...')
           if $DEBUG;
         next;
       }
+
+      #we may have getters/setters written by the author of the subclass
+      # so call each setter separately
       $self->$field($args->{$field});
     }
   }
@@ -202,7 +214,7 @@ sub insert {
 #--regex-perl=/^=head2\s+(.+)/-- \1/p,pod,Plain Old Documentation/
 #--regex-perl=/^=head[3-5]\s+(.+)/---- \1/p,pod,Plain Old Documentation/
 
-__END__
+#__END__
 
 =encoding utf8
 
@@ -216,11 +228,11 @@ This module is writen to replace most of the abstraction stuff from the base
 model class in the MYDLjE project on github, but can be used independently as well. 
 
 The class provides some useful methods which simplify representing rows from 
-tables as Perl objects. It is not intended to be a full featured ORM at all.
-It does not support relational mapping. This is left to the developer
-It is rather a database row abstraction. If you have to do complicated  SQL queries use directly 
-L<DBIx::Simple/query> method.
-
+tables as Perl objects and modifying them. It is not intended to be a full featured ORM 
+at all. It does not support relational mapping. This is left to the developer.
+It is rather a database table/row abstraction. 
+At the same time it is not just a fancy representation of a table row 
+like DBIx::Simple::Result::RowObject. See below for details.
 Last but not least, this module has no other non-CORE dependencies besides DBIx::Simple.
 
 =head1 SYNOPSIS
@@ -254,15 +266,13 @@ Last but not least, this module has no other non-CORE dependencies besides DBIx:
   #3. usage 
   use My::Model::AdminUser;
   my $user = $dbix->select(
-    My::Model::AdminUser->TABLE,
-    '*',
-    {login_name => 'fred'}
+    My::Model::AdminUser->TABLE, '*', {login_name => 'fred'}
   )->object('My::Model::AdminUser')
   #or better (if SQL::Abstract is installed)
   my $user = My::Model::AdminUser->select(login_name => 'fred'); #this is cleaner
   
   $user->first_name('Fred')->last_name('Flintstone');#chainable setters
-  $user->save; #update user
+  $user->save; #update row
   #....
   my $user = My::Model::AdminUser->new(
     login_name => 'fred',
@@ -389,7 +399,8 @@ database and should be valid. See L<DBIx::Simple/Advanced_object_construction>.
 
 =head2 select
 
-A convenient wrapper for L<DBIx::Simple/select> and constructor. 
+A convenient wrapper for 
+C<$dbix-E<gt>select($table,$columns,$where)-E<gt>object($class)> and constructor. 
 Note that L<SQL::Abstract> B<must be installed>. 
 Instantiates an object from a saved in the database row by constructing and 
 executing an SQL query based on the parameters. 
@@ -399,6 +410,16 @@ If a row is found puts it in L</data>.
 Returns an instance of your class on success or C<undef> otherwise.
 
   my $user = MYDLjE::M::User->select(id => $user_id);
+
+=head2 query
+
+A convenient wrapper for C<$dbix-E<gt>query($SQL,@bind)-E<gt>object($class)> and constructor. 
+Accepts exacttly the same arguments as L<DBIx::Simple/query>.
+Returns an instance of your class on success or C<undef> otherwise.
+
+  my $user = My::User->query(
+    'SELECT ' . join (',',My::User->COLUMNS)
+    . ' FROM ' . My::User->TABLE.' WHERE id=? and disabled=?', 12345, 0);
 
 =head2 data
 
@@ -448,6 +469,14 @@ retreived from the database. Returns true on success.
 
 Красимир Беров, C<< <berov at cpan.org> >>
 
+=head1 CREDITS
+
+Jos Boumans for Params::Check
+
+Juerd Waalboer for DBIx::Simple
+
+Nate Wiger  and all contributors for SQL::Abstract
+
 =head1 BUGS
 
 Please report any bugs or feature requests to 
@@ -487,7 +516,7 @@ L<http://search.cpan.org/dist/DBIx-Simple-Class/>
 
 =head1 SEE ALSO
 
-L<DBIx::Simple>, L<SQL::Abstract>, L<Params::Check>
+L<DBIx::Simple>, L<DBIx::Simple::Result::RowObject>, L<DBIx::Simple::OO> L<SQL::Abstract>, L<Params::Check>
 L<https://github.com/kberov/MYDLjE>
 
 

@@ -176,7 +176,7 @@ is(ref $user->data, 'HASH', 'disabled via data is valid');
   use base qw(DBIx::Simple::Class);
 
   use constant TABLE   => 'groups';
-  use constant COLUMNS => [qw(id group foo-bar)];
+  use constant COLUMNS => [qw(id group foo-bar data)];
   use constant WHERE   => {};
 
   #See Params::Check
@@ -187,11 +187,16 @@ my $group;
 
 like(
   (eval { My::Group->new() }, $@),
+  qr/You can not use .+? as a column name/,
+  '"You can not use \'data\' as a column name" ok'
+);
+
+delete My::Group->COLUMNS->[-1];
+like(
+  (eval { My::Group->new() }, $@),
   qr/Illegal declaration of subroutine/,
   '"Illegal declaration of subroutine" ok'
 );
-
-
 delete My::Group->COLUMNS->[-1];
 
 is_deeply(My::Group->COLUMNS, [qw(id group)]);
@@ -245,6 +250,16 @@ if (eval { My::User->dbix->abstract }) {
     $user->data, 'select works!');
   is_deeply(My::User->select(id => $user->id)->data, undef, 'wrong select works!');
 }
+is_deeply(
+  My::User->query('select * from users where id=? and disabled=?', $user->id, 0)->data,
+  $user->data,
+  'select works!'
+);
+is_deeply(
+  My::User->query('select * from users where id=? and disabled=?', $user->id, 1)->data,
+  undef,
+  'wrong select works!'
+);
 
 done_testing();
 

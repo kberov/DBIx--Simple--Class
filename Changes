@@ -1,3 +1,12 @@
+Revision history for DBIx::Simple::Class
+
+0.52    2012-02-15 16:53:50 EET
+        - Switched to maually mantained Changes file.
+        - Improved documentation yet more.
+        - Implemented query() method.
+        - Improved _make_field_attrs() to check for reserved column names.
+        - Optimized _make_field_attrs(). 
+
 commit 1bc0c9e2374f52602cef3d503f82096f6ca1ee8b
 Author: Krasimir Berov <k.berov@gmail.com>
 Date:   Tue Feb 14 18:36:32 2012 +0200
