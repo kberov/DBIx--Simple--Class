@@ -1,4 +1,6 @@
 Revision history for DBIx::Simple::Class
+0.54    2012-02-16 14:22:14 EET
+        ...
 
 0.53    2012-02-16 12:33:52 EET
         - Added support for column aliases to be used as methods.

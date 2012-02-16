@@ -51,7 +51,6 @@ sub dbix {
 }
 
 #METHODS
-use Data::Dumper;
 
 sub new {
   my ($class, $fields) = _get_obj_args(@_);
