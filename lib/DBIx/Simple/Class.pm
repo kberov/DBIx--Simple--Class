@@ -8,7 +8,7 @@ use Params::Check;
 use List::Util qw(first);
 use Carp;
 
-our $VERSION = '0.52';
+our $VERSION = '0.53';
 $Params::Check::WARNINGS_FATAL = 1;
 $Params::Check::CALLER_DEPTH   = $Params::Check::CALLER_DEPTH + 1;
 
@@ -41,6 +41,8 @@ sub WHERE { {} }
 
 sub PRIMARY_KEY {'id'}
 
+sub ALIASES { {} }
+
 my $DBIX;    #DBIx::Simple instance
 
 #ATTRIBUTES
@@ -49,9 +51,12 @@ sub dbix {
 }
 
 #METHODS
+use Data::Dumper;
 
 sub new {
   my ($class, $fields) = _get_obj_args(@_);
+
+  #warn Dumper($fields,$class->CHECKS);
   $fields = Params::Check::check($class->CHECKS, $fields)
     || croak(Params::Check::last_error());
   $class->_make_field_attrs()
@@ -84,13 +89,15 @@ sub _make_field_attrs {
     || croak("Call this method as $class->make_field_attrs()");
   my $code = '';
   foreach (@{$class->COLUMNS}) {
-    croak("You can not use '$_' as a column name since it is already defined in "
-        . __PACKAGE__ . '.')
-      if __PACKAGE__->can($_);
-    next if $class->can($_);    #careful: no redefine
+    my $alias = $class->ALIASES->{$_} || $_;
+    croak("You can not use '$alias' as a column name since it is already defined in "
+        . __PACKAGE__
+        . '. Please define an \'alias\' for the column to be used as method.')
+      if __PACKAGE__->can($alias);
+    next if $class->can($alias);    #careful: no redefine
     $code = "use strict;$/use warnings;$/use utf8;$/" unless $code;
     $code .= <<"SUB";
-sub $class\::$_ {
+sub $class\::$alias {
   my (\$self,\$value) = \@_;
   if(defined \$value){ #setting value
     \$self->{data}{$_} = \$self->_check($_=>\$value);
@@ -134,6 +141,7 @@ sub data {
   my ($self, $args) = _get_obj_args(@_);
   if (ref $args && keys %$args) {
     for my $field (keys %$args) {
+      my $alias = $self->ALIASES->{$field} || $field;
       unless (first { $field eq $_ } @{$self->COLUMNS()}) {
         Carp::cluck(
           "There is not such field $field in table " . $self->TABLE . '! Skipping...')
@@ -143,13 +151,14 @@ sub data {
 
       #we may have getters/setters written by the author of the subclass
       # so call each setter separately
-      $self->$field($args->{$field});
+      $self->$alias($args->{$field});
     }
   }
 
   #a key
   elsif ($args && (!ref $args)) {
-    return $self->$args;
+    my $alias = $self->ALIASES->{$args} || $args;
+    return $self->$alias;
   }
 
   #they want all that we touched in $self->{data}
@@ -214,7 +223,7 @@ sub insert {
 #--regex-perl=/^=head2\s+(.+)/-- \1/p,pod,Plain Old Documentation/
 #--regex-perl=/^=head[3-5]\s+(.+)/---- \1/p,pod,Plain Old Documentation/
 
-#__END__
+__END__
 
 =encoding utf8
 
@@ -351,6 +360,40 @@ in the same table. Default: 'id'.
     #or simply
     sub PRIMARY_KEY {'product_id'}
 
+=head2 ALIASES
+
+In case you have table columns that collide with some of the package methods like L</data>,
+L</save> etc. you can define aliases that can be used as method names. 
+
+You are free to define your own methods that update column data. They will not be overriden. 
+All they need to do is to check the validity of the input and put the changed value in 
+C<$self-E<gt>{data}>.
+
+  #in you class
+  package My::Collision;
+  use base qw(DBIx::Simple::Class);
+
+  use constant TABLE   => 'collision';
+  use constant COLUMNS => [qw(id data)];
+  use constant WHERE   => {};
+  use constant ALIASES => {data => 'column_data'};
+
+  #CHECKS are on columns
+  use constant CHECKS => {
+    id   => {allow   => qr/^\d+$/x},
+    data => {default => '',}           #that's ok
+  };
+  1;
+  #usage
+  my $coll = My::Collision->new(data => 'some text');
+  #or
+  my $coll = My::Collision->query('select * from collision where id=1');
+  $coll->column_data('changed')->save;
+  #or
+  $coll->data(data=>'changed')->save;
+  #...
+  $coll->column_data; #returns 'changed'
+
 =head1 ATTRIBUTES
 
 =head2 dbix
@@ -464,6 +507,11 @@ retreived from the database. Returns true on success.
   )->object('My::Model::AdminUser')
   $user->first_name('Fred')->last_name('Flintstone');
   $user->update;
+
+=head1 EXAMPLES
+
+Please look at the test file C<t/01-dbix-simple-class.t> of the distribution for a welth of examples.
+
 
 =head1 AUTHOR
 

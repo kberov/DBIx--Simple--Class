@@ -261,5 +261,53 @@ is_deeply(
   'wrong select works!'
 );
 
+#test column=>method collision
+my $collision_table = <<"T";
+CREATE TABLE collision(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  data TEXT
+  )
+T
+
+$dbix->query($collision_table);
+{
+
+  package My::Collision;
+  use base qw(DBIx::Simple::Class);
+
+  use constant TABLE   => 'collision';
+  use constant COLUMNS => [qw(id data)];
+  use constant WHERE   => {};
+  use constant ALIASES => {data => 'column_data'};
+
+  #CHECKS are on columns
+  use constant CHECKS => {
+    id   => {allow   => qr/^\d+$/x},
+    data => {default => '',}           #that's ok
+  };
+  1;
+}
+my $coll;
+isa_ok($coll = My::Collision->new(data => 'some text'),
+  'My::Collision', '"column=>alias" ok');
+
+#use it
+is_deeply($coll->column_data('bar')->data, {data => 'bar'}, 'alias() sets ok');
+is($coll->column_data, 'bar', 'alias() gets ok');
+is_deeply($coll->data('data'), 'bar', 'data() gets ok');
+is_deeply($coll->data('data' => 'foo'), {data => 'foo'}, 'data() sets ok');
+is($coll->save, 1, 'alias() inserts ok');
+$coll = My::Collision->query('select * from collision where id=1');
+is_deeply($coll->data, {data => 'foo', id => 1}, 'alias() query ok');
+if (eval { My::Collision->dbix->abstract }) {
+  $coll = My::Collision->select(id => 1);
+  is_deeply($coll->data, {data => 'foo', id => 1}, 'alias() select ok');
+}
+ok($coll->column_data('barababa')->save, 'alias() updates ok');
+is(
+  $coll->column_data,
+  My::Collision->query('select * from collision where id=1')->column_data,
+  'alias() updates ok2'
+);
 done_testing();
 
