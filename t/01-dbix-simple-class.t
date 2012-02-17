@@ -30,7 +30,7 @@ like((eval { $DSC->dbix('') }, $@), qr/not instantiated/);
 isa_ok(ref($DSC->dbix($dbix)), 'DBIx::Simple');
 isa_ok(ref($DSC->dbix),        'DBIx::Simple');
 
-like((eval { $DSC->TABLE },   $@), qr/tablename for your class/);
+like((eval { $DSC->TABLE },   $@), qr/table-name for your class/);
 like((eval { $DSC->COLUMNS }, $@), qr/fields for your class/);
 like((eval { $DSC->CHECKS },  $@), qr/define your CHECKS subroutine/);
 is(ref($DSC->WHERE), 'HASH');
