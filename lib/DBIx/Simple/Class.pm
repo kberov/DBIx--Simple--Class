@@ -20,7 +20,7 @@ sub DEBUG { defined $_[1] ? ($DEBUG = $_[1]) : $DEBUG }
 
 #tablename
 sub TABLE {
-  croak("You must define a tablename for your class: sub TABLE {'tablename'}!");
+  croak("You must define a table-name for your class: sub TABLE {'tablename'}!");
 }
 
 #table columns
@@ -222,7 +222,7 @@ sub insert {
 #--regex-perl=/^=head2\s+(.+)/-- \1/p,pod,Plain Old Documentation/
 #--regex-perl=/^=head[3-5]\s+(.+)/---- \1/p,pod,Plain Old Documentation/
 
-__END__
+#__END__
 
 =encoding utf8
 
@@ -232,7 +232,7 @@ DBIx::Simple::Class - Advanced object construction for DBIx::Simple!
 
 =head1 DESCRIPTION
 
-This module is writen to replace most of the abstraction stuff from the base 
+This module is written to replace most of the abstraction stuff from the base 
 model class in the MYDLjE project on github, but can be used independently as well. 
 
 The class provides some useful methods which simplify representing rows from 
@@ -241,7 +241,7 @@ at all. It does not support relational mapping. This is left to the developers u
 
 DBIx::Simple::Class is a database table/row abstraction. 
 At the same time it is not just a fancy representation of a table row 
-like DBIx::Simple::Result::RowObject (well you could nmake your subclass which is :)). 
+like DBIx::Simple::Result::RowObject (well you could make your subclass which is :)). 
 See below for details.
 Last but not least, this module has no other non-CORE dependencies besides DBIx::Simple.
 
@@ -269,7 +269,7 @@ Last but not least, this module has no other non-CORE dependencies besides DBIx:
   
   1;#end of My::Model::AdminUser
 
-  #2. In a startup script or subroutine
+  #2. In a start-up script or subroutine
   DBIx::Simple::Class->dbix( DBIx::Simple->connect(...) );
 
   #3. usage 
@@ -311,7 +311,7 @@ Last but not least, this module has no other non-CORE dependencies besides DBIx:
 
 You B<must> define it in your subclass. This is the table where 
 your object will store its data. Must return a string - the table name. 
-And with little imaginaniton you could put here some complex SQL or 
+And with little imagination you could put here some complex SQL or 
 an already prepared view: 
 
   (SELECT * FROM users WHERE column1='something' column2='other')
@@ -333,14 +333,14 @@ This constant is optional.
   sub WHERE { {data_type => 'note',published=>1 } };
   #...
   use My::PublishedNote;
-  #somwhere in your app
+  #somewhere in your application
   my $note = My::PublishedNote->select(id=>12345);
                                                       
 =head2 COLUMNS
 
 You B<must> define it in your subclass. 
-It must return an ARRAYREF with table columns to which the data is written.
-It is used  in L<DBIx::Simple/select> when retreiving a row from the database 
+It must return an ARRAY-REF with table columns to which the data is written.
+It is used  in L<DBIx::Simple/select> when retrieving a row from the database 
 and when saving object data. This list is also used to generate specific 
 getters and setters for each data-field.
 
@@ -349,11 +349,12 @@ getters and setters for each data-field.
   dbix->select($class->TABLE, $class->COLUMNS, {%{$class->WHERE}, %$where})->object($class);
 
 In case you have table columns that collide with some of the methods defined in this class like L</data>,
-L</save> etc., you can define aliases that will be used as method names. See </ALIASES>.
+L</save> etc., you can define aliases that will be used as method names. 
+See L</ALIASES>.
 
 =head2 CHECKS
 
-You B<must> define this soubroutine/constant in your class and put in it your
+You B<must> define this subroutine/constant in your class and put in it your
 C<$_CHECKS>. 
 C<$_CHECKS> is a HASHREF that must conform to the syntax supported by L<Params::Check/Template>.
 
@@ -373,7 +374,7 @@ in the same table. Default: 'id'.
 In case you have table columns that collide with some of the package methods like L</data>,
 L</save> etc., you can define aliases that will be used as method names. 
 
-You are free to define your own getters/setter for fields. They will not be overriden. 
+You are free to define your own getters/setter for fields. They will not be overridden. 
 All they need to do is to check the validity of the input and put the changed value in 
 C<$self-E<gt>{data}>.
 
@@ -419,7 +420,7 @@ to the current DBIx::Simple instance (with L<SQL::Abstract> support eventually :
 
 =head2 DEBUG
 
-Flag to enable/disable debug warnings. Influencess all DBIx::Simple::Class subclasses.
+Flag to enable/disable debug warnings. Influences all DBIx::Simple::Class subclasses.
 
     DBIx::Simple::Class->DEBUG(1);
     my $note = My::Note->new;# see in the log what methods are generated for your columns
@@ -472,7 +473,7 @@ Returns an instance of your class on success or C<undef> otherwise.
 =head2 query
 
 A convenient wrapper for C<$dbix-E<gt>query($SQL,@bind)-E<gt>object($class)> and constructor. 
-Accepts exacttly the same arguments as L<DBIx::Simple/query>.
+Accepts exactly the same arguments as L<DBIx::Simple/query>.
 Returns an instance of your class on success or C<undef> otherwise.
 
   my $user = My::User->query(
@@ -494,10 +495,10 @@ Returns a HASHREF - name/value pairs of the fields.
 
 Intelligent saver. If the object is fresh 
 ( not instantiated via L</new_from_dbix_simple> and L</select>) prepares and 
-executes an C<INSERT> statment, otherwise preforms an C<UPDATE>. 
+executes an C<INSERT> statement, otherwise preforms an C<UPDATE>. 
 L</TABLE> and L</COLUMNS> are used to construct the SQL. 
 L</data> is stored as a row in L</TABLE>.
-Returns the value of the internally performed opperation. See below.
+Returns the value of the internally performed operation. See below.
 
   my $note = MyNote->new(title=>'My Title', description =>'This is a great story.');
   #do something more...
@@ -516,7 +517,7 @@ See L<DBIx::Simple/last_insert_id>.
 =head2 update
 
 Used internally in L</save>. Can be used when you are sure your object is 
-retreived from the database. Returns true on success.
+retrieved from the database. Returns true on success.
 
   use My::Model::AdminUser;
   my $user = $dbix->query(
@@ -527,7 +528,7 @@ retreived from the database. Returns true on success.
 
 =head1 EXAMPLES
 
-Please look at the test file C<t/01-dbix-simple-class.t> of the distribution for a welth of examples.
+Please look at the test file C<t/01-dbix-simple-class.t> of the distribution for a wealth of examples.
 
 
 =head1 AUTHOR
