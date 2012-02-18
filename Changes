@@ -1,4 +1,9 @@
 Revision history for DBIx::Simple::Class
+0.55    2012-02-18 14:42:41 EET
+        - Added support for custom SQL
+        - Added new method by_pk() for getting by PRIMARY_KEY
+        - Added links to popular ORMs
+        
 0.54    2012-02-17 14:06:48 EET
         - Improved documentation
         - Fixed potential bug with PRIMARY_KEY quoting/definedness

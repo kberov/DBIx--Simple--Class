@@ -310,5 +310,56 @@ is(
   My::Collision->query('select * from collision where id=1')->column_data,
   'alias() updates ok2'
 );
-done_testing();
 
+#test getting by primary key
+My::Collision->new(data => 'second id')->save;
+is(My::Collision->by_pk(2)->id, 2, 'by_pk ok');
+is(My::Collision->by_pk(2)->id, 2, 'by_pk ok from $SQL_CACHE');
+
+#testing SQL
+my $site_group = My::Group->new(group_name => 'SiteUsers');
+$site_group->save;
+
+{
+
+  package My::SiteUser;
+  use base qw(My::User);
+  sub WHERE { {disabled => 0, group_id => 2} }
+
+  #merge with parent $SQL
+  __PACKAGE__->SQL(GUEST_USER => 'SELECT * FROM users WHERE login_name = \'guest\'');
+
+  1;
+}
+my $SCLASS = 'My::SiteUser';
+isa_ok($SCLASS->SQL(FOO => 'SELECT * FROM foo'), 'HASH', 'SQL() is setting ok');
+is(
+  $SCLASS->SQL(FOO => 'SELECT * FROM foo') && $SCLASS->SQL('FOO'),
+  'SELECT * FROM foo',
+  'SQL() is setting ok2'
+);
+like($SCLASS->SQL('SELECT'),       qr/FROM\s+users/x,        'SQL() is getting ok2');
+like(My::Collision->SQL('SELECT'), qr/FROM\s+collision/x,    'SQL() is getting ok3');
+like($SCLASS->SQL('GUEST_USER'),   qr/SELECT \* FROM users/, 'SQL() is getting ok4');
+
+like((eval { $DSC->SQL('SELECT') } || $@), qr/fields for your class/,
+  'SQL() croaks ok');
+
+$SCLASS->new(login_name => 'guest', login_password => time . 'QW')
+  ->group_id($site_group->id)->save;
+
+my $guest = $SCLASS->query($SCLASS->SQL('SELECT') . ' AND id=?', 1);
+$guest = $SCLASS->by_pk(1);
+is(
+  $SCLASS->SQL('BY_PK'),
+  $DBIx::Simple::Class::SQL_CACHE->{$SCLASS}{BY_PK},
+  'SQL() is getting ok'
+);
+
+like(
+  $DSC->SQL('SELECT'),
+  qr/SELECT.+FROM\s+users\sWHERE\sdisabled.+group_id='2'/x,
+  'SELECT generated ok'
+);
+
+done_testing();

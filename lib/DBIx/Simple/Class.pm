@@ -7,8 +7,9 @@ use DBIx::Simple;
 use Params::Check;
 use List::Util qw(first);
 use Carp;
+use Data::Dumper;
 
-our $VERSION = '0.54';
+our $VERSION = '0.55';
 $Params::Check::WARNINGS_FATAL = 1;
 $Params::Check::CALLER_DEPTH   = $Params::Check::CALLER_DEPTH + 1;
 my $_attributes_made = {};
@@ -43,6 +44,63 @@ sub WHERE { {} }
 sub PRIMARY_KEY {'id'}
 
 sub ALIASES { {} }
+
+our $SQL_CACHE = {};
+my $SQL = {
+  SELECT => sub {
+    my $class = shift;
+    return $SQL_CACHE->{$class}{SELECT} ||= do {
+      my $where = $class->WHERE;
+      'SELECT ' 
+        . join(',', @{$class->COLUMNS}) 
+        . ' FROM ' 
+        . $class->TABLE
+        . (
+        (keys %$where)
+        ? ' WHERE '
+          . join(' AND ',
+            map { "$_=" . $class->dbix->dbh->quote($where->{$_}) }
+              keys %$where)
+        : ''
+        );
+      }
+  },
+  BY_PK => sub {
+    my $class = $_[0];
+    #cache this query and return it
+    return $SQL_CACHE->{$class}{BY_PK} ||=do{
+        'SELECT '
+      . join(',', @{$class->COLUMNS})
+      . ' FROM '
+      . $class->TABLE
+      . ' WHERE '
+    . $class->PRIMARY_KEY . '=?';};
+    },
+};
+
+sub SQL {
+  my ($self, $args) = _get_obj_args(@_);    #class or object
+  if (ref $args) {           #adding new SQL strings($k=>$v pairs)
+    return $SQL->{$self} = {%{$SQL->{$self}||{}},%{$args||{}}};
+  }
+
+  #a key
+  if ($args && !ref $args) {
+
+    #allow subclasses to override parent sqls
+    my $_SQL = $SQL->{$self}{$args} || $SQL->{$args};
+    if (ref $_SQL) {
+      return $_SQL->($self);
+    }
+    else {
+      return $_SQL;
+    }
+  }
+
+  #they want all
+  return $SQL;
+}
+
 
 my $DBIX;    #DBIx::Simple instance
 
@@ -79,6 +137,11 @@ sub query {
   return dbix->query(@_)->object($class);
 }
 
+sub by_pk {
+  my $class = shift;
+  return dbix->query($SQL_CACHE->{$class}{BY_PK} || $class->SQL('BY_PK'), shift)
+    ->object($class);
+}
 
 sub _make_field_attrs {
   my $class = shift;
@@ -181,12 +244,12 @@ sub save {
 }
 
 sub update {
-  my ($self)  = @_;
-  my $pk      = $self->PRIMARY_KEY;
+  my ($self) = @_;
+  my $pk = $self->PRIMARY_KEY;
   $self->{data}{$pk} || croak('Please define primary key column (\$self->$pk(?))!');
   my @columns = @{$self->COLUMNS};
-  my $SET = join(', ', map {qq($/$_=?)} @columns);
-  my $SQL = sprintf(
+  my $SET     = join(', ', map {qq($/$_=?)} @columns);
+  my $SQL     = sprintf(
     'UPDATE ' . $self->TABLE . " SET $SET WHERE $pk=%s",
     dbix->{dbh}->quote($self->{data}{$pk})
   );
@@ -198,7 +261,7 @@ sub insert {
   my ($pk, $table, @columns) = ($self->PRIMARY_KEY, $self->TABLE, @{$self->COLUMNS});
   my $SQL =
       "INSERT INTO $table ("
-    . join(',', map {$_} @columns)
+    . join(',', @columns)
     . ') VALUES('
     . join(',', map {'?'} @columns) . ')';
   dbix->query($SQL, (map { $self->{data}{$_} } @columns));
@@ -468,7 +531,8 @@ statement. Prepends the L</WHERE> clause defined by you to the parameters.
 If a row is found, puts it in L</data>. 
 Returns an instance of your class on success or C<undef> otherwise.
 
-  my $user = MYDLjE::M::User->select(id => $user_id);
+    # Build your WHERE using an SQL::Abstract structure:
+    my $user = MYDLjE::M::User->select(id => $user_id);
 
 =head2 query
 
@@ -582,7 +646,9 @@ L<http://search.cpan.org/dist/DBIx-Simple-Class/>
 
 =head1 SEE ALSO
 
-L<DBIx::Simple>, L<DBIx::Simple::Result::RowObject>, L<DBIx::Simple::OO> L<SQL::Abstract>, L<Params::Check>
+L<DBIx::Simple>, L<DBIx::Simple::Result::RowObject>, L<DBIx::Simple::OO> 
+L<DBIx::Class>, L<Data::ObjectDriver>,L<Class::DBI>, L<Class::DBI::Lite>, 
+L<SQL::Abstract>, L<Params::Check>
 L<https://github.com/kberov/MYDLjE>
 
 
