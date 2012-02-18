@@ -59,29 +59,31 @@ my $SQL = {
         (keys %$where)
         ? ' WHERE '
           . join(' AND ',
-            map { "$_=" . $class->dbix->dbh->quote($where->{$_}) }
-              keys %$where)
+          map { "$_=" . $class->dbix->dbh->quote($where->{$_}) }
+            keys %$where)
         : ''
         );
       }
   },
   BY_PK => sub {
     my $class = $_[0];
+
     #cache this query and return it
-    return $SQL_CACHE->{$class}{BY_PK} ||=do{
-        'SELECT '
-      . join(',', @{$class->COLUMNS})
-      . ' FROM '
-      . $class->TABLE
-      . ' WHERE '
-    . $class->PRIMARY_KEY . '=?';};
-    },
+    return $SQL_CACHE->{$class}{BY_PK} ||= do {
+      'SELECT '
+        . join(',', @{$class->COLUMNS})
+        . ' FROM '
+        . $class->TABLE
+        . ' WHERE '
+        . $class->PRIMARY_KEY . '=?';
+    };
+  },
 };
 
 sub SQL {
   my ($self, $args) = _get_obj_args(@_);    #class or object
-  if (ref $args) {           #adding new SQL strings($k=>$v pairs)
-    return $SQL->{$self} = {%{$SQL->{$self}||{}},%{$args||{}}};
+  if (ref $args) {                          #adding new SQL strings($k=>$v pairs)
+    return $SQL->{$self} = {%{$SQL->{$self} || {}}, %{$args || {}}};
   }
 
   #a key
@@ -137,7 +139,7 @@ sub query {
   return dbix->query(@_)->object($class);
 }
 
-sub by_pk {
+sub select_by_pk {
   my $class = shift;
   return dbix->query($SQL_CACHE->{$class}{BY_PK} || $class->SQL('BY_PK'), shift)
     ->object($class);
