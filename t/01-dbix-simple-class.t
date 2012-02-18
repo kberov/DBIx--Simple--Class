@@ -199,7 +199,7 @@ like(
 );
 delete My::Group->COLUMNS->[-1];
 
-is_deeply(My::Group->COLUMNS, [qw(id group_name)]);
+is_deeply(My::Group->COLUMNS, [qw(id group_name)], 'COLUMNS are valid now - ok');
 
 like(
   (eval { My::Group->new(description => 'tralala') }, $@),
@@ -214,9 +214,9 @@ like(
 );
 ok(My::Group->can('id'),         'can id');
 ok(My::Group->can('group_name'), 'can group_name');
-ok($group = My::Group->new);
-ok($group->id(1));
-ok($group->data('lala' => 1));
+ok($group = My::Group->new, 'My::Group->new ok');
+ok($group->id(1), '$group->id(1) ok');
+ok($group->data('lala' => 1), 'can not lala ok');
 is_deeply($group->data(), {id => 1}, '"There is not such field lala" ok');
 My::Group->DEBUG(0);
 
@@ -346,18 +346,27 @@ like(
   'SQL(GUEST_USER) is getting ok'
 );
 
-like((eval { $DSC->SQL('SELECT') } || $@), qr/fields for your class/,
-  'SQL() croaks ok');
+like(
+  (eval { $DSC->SQL('SELECT') } || $@),
+  qr/fields for your class/,
+  '$DSC->SQL(SELECT) croaks ok'
+);
 
 $SCLASS->new(login_name => 'guest', login_password => time . 'QW')
   ->group_id($site_group->id)->save;
 
 my $guest = $SCLASS->query($SCLASS->SQL('SELECT') . ' AND id=?', 1);
 $guest = $SCLASS->select_by_pk(1);
+like(
+  (eval { $guest->SQL('SELECT') } || $@),
+  qr/This is a class method/,
+  '$guest->SQL(SELECT) croaks ok'
+);
+
 is(
   $SCLASS->SQL('BY_PK'),
-  $DBIx::Simple::Class::SQL_CACHE->{$SCLASS}{BY_PK},
-  'SQL() is getting ok'
+  $DSC->_SQL_CACHE->{$SCLASS}{BY_PK},
+  'SQL(BY_PK) is getting ok'
 );
 
 like(

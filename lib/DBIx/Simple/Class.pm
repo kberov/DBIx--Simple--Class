@@ -7,7 +7,6 @@ use DBIx::Simple;
 use Params::Check;
 use List::Util qw(first);
 use Carp;
-use Data::Dumper;
 
 our $VERSION = '0.55';
 $Params::Check::WARNINGS_FATAL = 1;
@@ -45,8 +44,9 @@ sub PRIMARY_KEY {'id'}
 
 sub ALIASES { {} }
 
-our $SQL_CACHE = {};
-my $SQL = {
+my $SQL_CACHE = {};
+my $SQL       = {};
+my $SQL       = {
   SELECT => sub {
     my $class = shift;
     return $SQL_CACHE->{$class}{SELECT} ||= do {
@@ -81,18 +81,19 @@ my $SQL = {
 };
 
 sub SQL {
-  my ($self, $args) = _get_obj_args(@_);    #class or object
-  if (ref $args) {                          #adding new SQL strings($k=>$v pairs)
-    return $SQL->{$self} = {%{$SQL->{$self} || {}}, %{$args || {}}};
+  my ($class, $args) = _get_obj_args(@_);    #class
+  croak('This is a class method. Do not use as object method.') if ref $class;
+  if (ref $args) {                           #adding new SQL strings($k=>$v pairs)
+    return $SQL->{$class} = {%{$SQL->{$class} || {}}, %{$args || {}}};
   }
 
   #a key
   if ($args && !ref $args) {
 
-    #allow subclasses to override parent sqls
-    my $_SQL = $SQL->{$self}{$args} || $SQL->{$args};
+    #allow subclasses to override parent sqls and cache produced SQL
+    my $_SQL = $SQL_CACHE->{$class}{$args} || $SQL->{$class}{$args} || $SQL->{$args};
     if (ref $_SQL) {
-      return $_SQL->($self);
+      return $_SQL->($class);
     }
     else {
       return $_SQL;
@@ -187,6 +188,7 @@ SUB
 
 #for outside modification during tests
 sub _attributes_made {$_attributes_made}
+sub _SQL_CACHE       {$SQL_CACHE}
 
 #conveninece for getting key/vaule arguments
 sub _get_args {
@@ -546,6 +548,15 @@ Returns an instance of your class on success or C<undef> otherwise.
     'SELECT ' . join (',',My::User->COLUMNS)
     . ' FROM ' . My::User->TABLE.' WHERE id=? and disabled=?', 12345, 0);
 
+=head2 select_by_pk
+
+Retreives  a row from the L</TABLE> by L</PRIMARY_KEY>. 
+Returns an instance of your class on success or C<undef> otherwise.
+
+    my $user = My::User->select_by_pk(1234);
+
+
+
 =head2 data
 
 Common getter/setter for all L</COLUMNS>. 
@@ -592,9 +603,44 @@ retrieved from the database. Returns true on success.
   $user->first_name('Fred')->last_name('Flintstone');
   $user->update;
 
+=head2 SQL
+
+A getter/setter for custom SQL code. 
+
+Class method. 
+You can add key/value pairs in your class and then use them in your application.
+The values can be simple strings or subroutine references.
+There are two entries in this base class that you can use as example 
+implementations. Look at the source for details.
+The subroutine references are executed/evaluated only once and their output is 
+cached for performance.
+
+  package My::SiteUser;
+  use base qw(My::User);#a subclass of DBIx::Simple::Class
+  sub WHERE { {disabled => 0, group_id => 2} }
+  
+  #these could be very complex and retreived from a file where you keep them!
+  __PACKAGE__->SQL(
+    GUEST => 'SELECT * FROM users WHERE login_name = \'guest\'',
+    DISABLED => sub{
+        'SELECT * FROM'.__PACKAGE__->TABLE.' WHERE disabled=?';
+    }
+    LAST_N_REGISTERED => __PACKAGE__->SQL('SELECT')
+        .' order by id desc LIMIT ?, ?'
+  );
+
+  1;
+  # in your application
+  $SU ='My::SiteUser';
+  my $guest = $SU->query($SU->SQL('GUEST'));
+  my @members = $SU->query($SU->SQL('SELECT'));#allll ;)
+  my @disabled = $SU->query($SU->SQL('DISABLED'), 1);
+  my @enabled = $SU->query($SU->SQL('DISABLED'), 0);
+
 =head1 EXAMPLES
 
-Please look at the test file C<t/01-dbix-simple-class.t> of the distribution for a wealth of examples.
+Please look at the test file C<t/01-dbix-simple-class.t> of the distribution 
+for a wealth of examples.
 
 
 =head1 AUTHOR
@@ -656,7 +702,7 @@ L<https://github.com/kberov/MYDLjE>
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright 2012 Красимир Беров.
+Copyright 2012 Красимир Беров (Krasimir Berov).
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of either: the GNU General Public License as published
