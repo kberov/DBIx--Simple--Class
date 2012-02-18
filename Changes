@@ -2,7 +2,7 @@ Revision history for DBIx::Simple::Class
 0.55    2012-02-18 17:22:30 EET
         - Added method for generating custom SQL
         - Added examples for using custom SQL
-        - Added new method by_pk() for getting by PRIMARY_KEY
+        - Added new method select_by_pk() for getting by PRIMARY_KEY
         - Added more tests
         - Added links to popular ORMs
         
