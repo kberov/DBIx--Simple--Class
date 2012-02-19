@@ -8,7 +8,7 @@ use Params::Check;
 use List::Util qw(first);
 use Carp;
 
-our $VERSION = '0.55';
+our $VERSION = '0.56';
 $Params::Check::WARNINGS_FATAL = 1;
 $Params::Check::CALLER_DEPTH   = $Params::Check::CALLER_DEPTH + 1;
 my $_attributes_made = {};
@@ -46,7 +46,7 @@ sub ALIASES { {} }
 
 my $SQL_CACHE = {};
 my $SQL       = {};
-my $SQL       = {
+$SQL = {
   SELECT => sub {
     my $class = shift;
     return $SQL_CACHE->{$class}{SELECT} ||= do {
@@ -65,11 +65,38 @@ my $SQL       = {
         );
       }
   },
-  BY_PK => sub {
+  INSERT => sub {
     my $class = $_[0];
 
     #cache this query and return it
-    return $SQL_CACHE->{$class}{BY_PK} ||= do {
+    return $SQL_CACHE->{$class}{INSERT} ||= do {
+      my ($pk, $table, @columns) =
+        ($class->PRIMARY_KEY, $class->TABLE, @{$class->COLUMNS});
+
+      #return of the do
+      "INSERT INTO $table ("
+        . join(',', @columns)
+        . ') VALUES('
+        . join(',', map {'?'} @columns) . ')';
+    };
+  },
+  UPDATE => sub {
+    my $class = $_[0];
+
+    #cache this query and return it
+    return $SQL_CACHE->{$class}{UPDATE} ||= do {
+      my $pk = $class->PRIMARY_KEY;
+
+      #do we always update all columns?!?! Yes, if we always retreive all columns.
+      my $SET = join(', ', map {qq($/$_=?)} @{$class->COLUMNS});
+      'UPDATE ' . $class->TABLE . " SET $SET WHERE $pk=%s";
+      }
+  },
+  SELECT_BY_PK => sub {
+    my $class = $_[0];
+
+    #cache this query and return it
+    return $SQL_CACHE->{$class}{SELECT_BY_PK} ||= do {
       'SELECT '
         . join(',', @{$class->COLUMNS})
         . ' FROM '
@@ -83,15 +110,20 @@ my $SQL       = {
 sub SQL {
   my ($class, $args) = _get_obj_args(@_);    #class
   croak('This is a class method. Do not use as object method.') if ref $class;
+
   if (ref $args) {                           #adding new SQL strings($k=>$v pairs)
-    return $SQL->{$class} = {%{$SQL->{$class} || {}}, %{$args || {}}};
+    return $SQL->{$class} = {%{$SQL->{$class} || $SQL}, %$args};
   }
 
   #a key
-  if ($args && !ref $args) {
+  if (!ref $args) {
 
     #allow subclasses to override parent sqls and cache produced SQL
-    my $_SQL = $SQL_CACHE->{$class}{$args} || $SQL->{$class}{$args} || $SQL->{$args};
+    my $_SQL =
+         $SQL_CACHE->{$class}{$args}
+      || $SQL->{$class}{$args}
+      || $SQL->{$args}
+      || $args;
     if (ref $_SQL) {
       return $_SQL->($class);
     }
@@ -123,27 +155,33 @@ sub new {
   return bless {data => $fields}, $class;
 }
 
-
 sub new_from_dbix_simple {
   $_[0]->_make_field_attrs() unless $_attributes_made->{$_[0]};
-  return bless {data => $_[1]->hash, new_from_dbix_simple => 1}, $_[0];
+  return bless {
+
+    #$_[1]->hash
+    data =>
+      $_[1]->{st}->{sth}->fetchrow_hashref($_[1]->{lc_columns} ? 'NAME_lc' : 'NAME'),
+    new_from_dbix_simple => 1
+    },
+    $_[0];
 }
 
 sub select {
   my ($class, $where) = _get_obj_args(@_);
-  return dbix->select($class->TABLE, $class->COLUMNS, {%{$class->WHERE}, %$where})
-    ->object($class);
+  return $class->dbix->select($class->TABLE, $class->COLUMNS,
+    {%{$class->WHERE}, %$where})->object($class);
 }
 
 sub query {
   my $class = shift;
-  return dbix->query(@_)->object($class);
+  return $class->dbix->query(@_)->object($class);
 }
 
 sub select_by_pk {
   my $class = shift;
-  return dbix->query($SQL_CACHE->{$class}{BY_PK} || $class->SQL('BY_PK'), shift)
-    ->object($class);
+  return $class->dbix->query($SQL_CACHE->{$class}{SELECT_BY_PK}
+      || $class->SQL('SELECT_BY_PK'), shift)->object($class);
 }
 
 sub _make_field_attrs {
@@ -251,26 +289,29 @@ sub update {
   my ($self) = @_;
   my $pk = $self->PRIMARY_KEY;
   $self->{data}{$pk} || croak('Please define primary key column (\$self->$pk(?))!');
-  my @columns = @{$self->COLUMNS};
-  my $SET     = join(', ', map {qq($/$_=?)} @columns);
-  my $SQL     = sprintf(
-    'UPDATE ' . $self->TABLE . " SET $SET WHERE $pk=%s",
-    dbix->{dbh}->quote($self->{data}{$pk})
-  );
-  return dbix->query($SQL, (map { $self->{data}{$_} } @columns));
+  $self->{SQL_UPDATE} ||= do {
+    my $SET = join(', ', map { $_ . '=? ' } keys %{$self->{data}});
+    'UPDATE ' . $self->TABLE . " SET $SET WHERE $pk=?";
+  };
+  return eval {
+    $self->dbix->{dbh}->prepare_cached($self->{SQL_UPDATE})
+      ->execute(values %{$self->{data}}, $self->{data}{$pk});
+  } || croak($@ =~ s/ at \S+ line \d+\.\n\z//);
+
+  #return $self->dbix->query($SQL, (map { $self->{data}{$_} } @columns));
 }
 
 sub insert {
   my ($self) = @_;
-  my ($pk, $table, @columns) = ($self->PRIMARY_KEY, $self->TABLE, @{$self->COLUMNS});
-  my $SQL =
-      "INSERT INTO $table ("
-    . join(',', @columns)
-    . ') VALUES('
-    . join(',', map {'?'} @columns) . ')';
-  dbix->query($SQL, (map { $self->{data}{$_} } @columns));
-  $self->$pk(dbix->last_insert_id(undef, undef, $table, $pk));
-  return $self->$pk;
+  my ($pk, $class) = ($self->PRIMARY_KEY, ref $self);
+  eval {
+    $self->dbix->{dbh}->prepare($SQL_CACHE->{$class}{INSERT} || $class->SQL('INSERT'))
+      ->execute(map { $self->{data}{$_} } @{$self->COLUMNS});
+  } || croak($@ =~ s/ at \S+ line \d+\.\n\z//);
+
+  return $self->{data}{$pk} =
+    $self->dbix->{dbh}->last_insert_id(undef, undef, $self->TABLE, $pk);
+
 }
 
 1;
@@ -302,15 +343,19 @@ DBIx::Simple::Class - Advanced object construction for DBIx::Simple!
 This module is written to replace most of the abstraction stuff from the base 
 model class in the MYDLjE project on github, but can be used independently as well. 
 
-The class provides some useful methods which simplify representing rows from 
-tables as Perl objects and modifying them. It is not intended to be a full featured ORM 
-at all. It does not support relational mapping. This is left to the developers using this class.
+The class provides useful methods which simplify representing rows from 
+tables as Perl objects and modifying them. It is not intended to be a full 
+featured ORM. It does not support relational mapping. 
+This is left to the developers using this class.
 
 DBIx::Simple::Class is a database table/row abstraction. 
 At the same time it is not just a fancy representation of a table row 
-like DBIx::Simple::Result::RowObject (well you could make your subclass which is :)). 
-See below for details.
+like DBIx::Simple::Result::RowObject. 
+Usin this module will make your code more organized, clean and reliable
+(separation of concerns + field-validation). 
+You will even get some more performance over plain DBIx::Simple.
 Last but not least, this module has no other non-CORE dependencies besides DBIx::Simple.
+See below for details.
 
 =head1 SYNOPSIS
 
@@ -498,22 +543,33 @@ Flag to enable/disable debug warnings. Influences all DBIx::Simple::Class subcla
 =head2 new
 
 Constructor.  
-Generates getters and setters (only once and if needed) for the fields described in 
-L</COLUMNS>. Sets the eventually passed parameters as fields if they exists 
+Accessors listed in COLUMNS are generated on first call for the fields described in 
+L</COLUMNS>. On any subsequent call field-accessors are not generated. 
+Accepts named parameters or a HASHREF containing named parameters.
+Sets the passed parameters as fields if they exists 
 as column names.
-
-  My::User->new($session->{user_data});
+  
+  my $user = My::User->new(
+    login_name => 'fred',
+    first_name => 'Fred',
+    last_name =>'Flintstone');
+  
+  my $user = My::User->new({
+    login_name => 'fred',
+    first_name => 'Fred',
+    last_name =>'Flintstone'
+  });#HASHREF accepted too
 
 =head2 new_from_dbix_simple
 
 A constructor called in L<DBIx::Simple/object> and 
 L<DBIx::Simple/objects>. Basically makes the same as C<new()> without 
 checking the validity of the field values since they come from the 
-database and should be valid. See L<DBIx::Simple/Advanced_object_construction>.
+database and should be valid. 
 You will never ever need to call this directly but this example is provided 
-to show how the DBIx::Simple::Class interacts with L<DBIx::Simple>.
+to show how the DBIx::Simple::Class interacts with L<DBIx::Simple>. 
+See L<DBIx::Simple/Advanced_object_construction>.
 
-  #This should be quicker than DBIx::Simple::Result::RowObject
   my $class = 'My::Model::AdminUser';
   my @admins = $dbix->select(
     $class->TABLE,
@@ -522,12 +578,30 @@ to show how the DBIx::Simple::Class interacts with L<DBIx::Simple>.
   )->objects($class);
   #one row
   my $admin = $class->select(id=>123});#see below
+  
+  My::User->query('SELECT * FROM users WHERE id=?',22)->login_name;
+  #The above is about 3 times faster than this below
+  $dbix->query('SELECT * FROM users WHERE id=?',2)
+            ->object(':RowObject')->login_name;
+
+=head2 query
+
+A convenient wrapper for C<$dbix-E<gt>query($SQL,@bind)-E<gt>object($class)> 
+and constructor. Accepts exactly the same arguments as L<DBIx::Simple/query>.
+Returns an instance of your class on success or C<undef> otherwise.
+
+  my $user = My::User->query(
+    'SELECT ' . join (',',My::User->COLUMNS)
+    . ' FROM ' . My::User->TABLE.' WHERE id=? and disabled=?', 12345, 0);
 
 =head2 select
 
 A convenient wrapper for 
 C<$dbix-E<gt>select($table,$columns,$where)-E<gt>object($class)> and constructor. 
-Note that L<SQL::Abstract> B<must be installed>. 
+Note that L<SQL::Abstract> B<must be installed>. This is the only method 
+that requires it. Have in mind that our L</query> is faster than this 
+and you can use named queries via L</SQL>.
+
 Instantiates an object from a saved in the database row by constructing and 
 executing an SQL query based on the parameters. 
 These parameters are used to construct the C<WHERE> clause for the SQL C<SELECT> 
@@ -537,16 +611,6 @@ Returns an instance of your class on success or C<undef> otherwise.
 
     # Build your WHERE using an SQL::Abstract structure:
     my $user = MYDLjE::M::User->select(id => $user_id);
-
-=head2 query
-
-A convenient wrapper for C<$dbix-E<gt>query($SQL,@bind)-E<gt>object($class)> and constructor. 
-Accepts exactly the same arguments as L<DBIx::Simple/query>.
-Returns an instance of your class on success or C<undef> otherwise.
-
-  my $user = My::User->query(
-    'SELECT ' . join (',',My::User->COLUMNS)
-    . ' FROM ' . My::User->TABLE.' WHERE id=? and disabled=?', 12345, 0);
 
 =head2 select_by_pk
 
@@ -584,8 +648,8 @@ Returns the value of the internally performed operation. See below.
 =head2 insert
 
 Used internally in L</save>. Can be used when you are sure your object is 
-new. Returns the value of the object L</PRIMARY_KEY> on success. 
-See L<DBIx::Simple/last_insert_id>.
+not present in the table. Returns the value of the object L</PRIMARY_KEY>
+on success. See L<DBIx::Simple/last_insert_id>.
 
     my $note = MyNote->new(title=>'My Title', description =>'This is a great story.');
     #do something more...
@@ -594,7 +658,7 @@ See L<DBIx::Simple/last_insert_id>.
 =head2 update
 
 Used internally in L</save>. Can be used when you are sure your object is 
-retrieved from the database. Returns true on success.
+retrieved from the table. Returns true on success.
 
   use My::Model::AdminUser;
   my $user = $dbix->query(
@@ -605,13 +669,13 @@ retrieved from the database. Returns true on success.
 
 =head2 SQL
 
-A getter/setter for custom SQL code. 
+A getter/setter for custom SQL code (named queries). 
 
 Class method. 
 You can add key/value pairs in your class and then use them in your application.
 The values can be simple strings or subroutine references.
-There are two entries in this base class that you can use as example 
-implementations. Look at the source for details.
+There are already some pre-made entries in this base class that you can 
+use as example implementations. Look at the source for details.
 The subroutine references are executed/evaluated only once and their output is 
 cached for performance.
 

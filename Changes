@@ -1,4 +1,16 @@
 Revision history for DBIx::Simple::Class
+0.56    2012-02-19 14:16:18 EET
+        - Fixed bug:"my $SQL" declared twice
+        - Optimised update() and insert() to use directly DBI
+          instead of $dbix->query
+        - Optimised new_from_dbix_simple  to use directly DBI 
+          instead of $dbix->hash 
+        - Got back to $class->dbix() instead of just dbix()
+          to allow subclasses to override dbix()
+        - Added new named queries (INSERT, UPDATE) to private $SQL 
+          and used $SQL->{$class}{INSERT} in insert() for performance
+        - Renamed BY_PK to SELECT_BY_PK named query.
+        - Improved documentation
 0.55    2012-02-18 17:22:30 EET
         - Added method for generating custom SQL
         - Added examples for using custom SQL

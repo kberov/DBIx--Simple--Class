@@ -193,12 +193,11 @@ like(
 
 delete My::Group->COLUMNS->[-1];
 like(
-  (eval { My::Group->new() }, $@),
+  (eval { My::Group->_make_field_attrs() }, $@),
   qr/Illegal declaration of subroutine/,
   '"Illegal declaration of subroutine" ok'
 );
 delete My::Group->COLUMNS->[-1];
-
 is_deeply(My::Group->COLUMNS, [qw(id group_name)], 'COLUMNS are valid now - ok');
 
 like(
@@ -233,6 +232,11 @@ ok($group = $dbix->query('select*from groups where id=1')->object('My::Group'));
 is($group->group_name, 'admins', 'group name is equal');
 my $g2;
 ok($g2 = My::Group->new(group_name => 'guests'));
+like(
+  (eval { $g2->update }, $@),
+  qr/Please\sdefine\sprimary\skey/x,
+  '"Please define primary key column" croaks ok'
+);
 is(($g2->save(group_name => 'users') && $g2->group_name),
   'users', 'new group_name "' . $g2->group_name . '" with params to save ok');
 
@@ -338,6 +342,7 @@ is(
   'SELECT * FROM foo',
   'SQL(FOO=>...) is setting ok2'
 );
+isa_ok($SCLASS->SQL(), 'HASH', 'SQL() is getting ok');
 like($SCLASS->SQL('SELECT'),       qr/FROM\s+users/x,     'SQL(SELECT) is getting ok');
 like(My::Collision->SQL('SELECT'), qr/FROM\s+collision/x, 'SQL(SELEC) is getting ok2');
 like(
@@ -364,9 +369,9 @@ like(
 );
 
 is(
-  $SCLASS->SQL('BY_PK'),
-  $DSC->_SQL_CACHE->{$SCLASS}{BY_PK},
-  'SQL(BY_PK) is getting ok'
+  $SCLASS->SQL('SELECT_BY_PK'),
+  $DSC->_SQL_CACHE->{$SCLASS}{SELECT_BY_PK},
+  'SQL(SELECT_BY_PK) is getting ok'
 );
 
 like(
@@ -376,3 +381,86 @@ like(
 );
 
 done_testing();
+
+
+__END__
+
+#Benchmarks
+use Benchmark qw(:all);
+for (1 .. 1000) {
+  my $user =
+    My::User->new(login_name => "user$_", login_password => time . $_ . 'a')->save();
+}
+
+#We are about 3 times faster when selecting than :RowObject.
+timethese(
+  10000,
+  { 'My::User' => sub {
+      my $u = My::User->query('SELECT * FROM users WHERE id=?', 22);
+      my $a = $u->login_name . $u->login_password;
+      #$u->login_name('aladin');
+      #$u->login_password('akjskajdksa12');
+    },
+    ':RowObject' => sub {
+      my $u = $dbix->query('SELECT * FROM users WHERE id=?', 22)->object(':RowObject');
+      my $a = $u->login_name . $u->login_password;
+      #$u->login_name('aladin');
+      #$u->login_password('akjskajdksa12');
+    },
+  }
+);
+
+#We are faster than $dbix->insert and faster than $dbix->query when used with (??)
+my $i = 0;
+timethese(
+  10000,
+  { 'My::User->insert' => sub {
+      My::User->new(login_name => "user" . $i++, login_password => time . 'a')
+        ->insert();
+    },
+    '$dbix->insert' => sub {
+      $dbix->insert(
+        'users',
+        { login_name     => "user" . $i++,
+          login_password => time . 'a'
+        }
+      );
+    },
+    '$dbix->query' => sub {
+      $dbix->query(
+        'INSERT into users(login_name,login_password)VALUES(??)',
+        "user" . $i++,
+        time . 'a'
+      );
+    },
+  }
+);
+
+
+use Benchmark qw(:all);
+
+#We are faster than $dbix->update
+my $uu = My::User->query('SELECT id,login_name,group_id FROM users WHERE id=?', 2);
+my $du = $dbix->query('SELECT id,login_name,group_id FROM users WHERE id=?', 2)->hash;
+my $dq = $dbix->query('SELECT id,login_name,group_id FROM users WHERE id=?', 2)->hash;
+
+my $i = 0;
+timethese(
+  10000,
+  { 'My::User->update' => sub {
+
+      $uu->data(login_name => 'pepi1', group_id => 2);
+      $uu->update;
+    },
+    '$dbix->update' => sub {
+      $dbix->update('users', {login_name => 'pepi1', group_id => 2}, {id => $du->{id}});
+    },
+    '$dbix->query' => sub {
+      $dbix->query('UPDATE users SET login_name=?, group_id=? WHERE id=? ',
+        'pepi1', 2, $dq->{id});
+    },
+  }
+);
+
+
+
