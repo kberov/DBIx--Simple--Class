@@ -1,4 +1,14 @@
 Revision history for DBIx::Simple::Class
+0.57    2012-02-20 16:28:56 EET
+        - Happy birthday to me! This release is my present for my self and everyone else!
+        - Fixed new_from_dbix_simple to be context aware
+        - Added find() alias for select_by_pk()
+        - Added SQL_LIMIT() custom SQL piece
+        - $dbh->{RaiseError} ==1 by default
+        - Added more tests
+        - Updated README
+        - BUILD_REQUIRES => {'DBD::SQLite' => '1.29'},
+        - Overall test coverage 93.8%
 0.56    2012-02-19 14:16:18 EET
         - Fixed bug:"my $SQL" declared twice
         - Optimised update() and insert() to use directly DBI

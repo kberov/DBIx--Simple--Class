@@ -237,11 +237,18 @@ like(
   qr/Please\sdefine\sprimary\skey/x,
   '"Please define primary key column" croaks ok'
 );
+
+
 is(($g2->save(group_name => 'users') && $g2->group_name),
   'users', 'new group_name "' . $g2->group_name . '" with params to save ok');
 
 is($user->group_id($group->id)->group_id, 1, 'added user to group ok');
 is($user->save,                           1, 'user inserted ok');
+
+#update dies
+$g2->{SQL_UPDATE} = 'UPDATE xx "BOOM';
+like((eval { $g2->update }, $@),
+  qr/prepare\sfailed/x, '"prepare failed" croaks ok');
 delete $DSC->_attributes_made->{'My::User'};
 ok(
   $user =
@@ -319,16 +326,22 @@ is(
 My::Collision->new(data => 'second id')->save;
 is(My::Collision->select_by_pk(2)->id, 2, 'select_by_pk ok');
 is(My::Collision->select_by_pk(2)->id, 2, 'select_by_pk ok from $SQL_CACHE');
+delete $DSC->_SQL_CACHE->{'My::Collision'}{SELECT_BY_PK};
+is(My::Collision->find(2)->id, 2, 'find ok');
+is(My::Collision->find(2)->id, 2, 'find ok from $SQL_CACHE');
 
 #testing SQL
 my $site_group = My::Group->new(group_name => 'SiteUsers');
-$site_group->save;
+is($site_group->save, 3, ' group ' . $site_group->group_name . ' created ok');
 
 {
 
   package My::SiteUser;
   use base qw(My::User);
-  sub WHERE { {disabled => 0, group_id => 2} }
+  my $_CHECKS = My::User->CHECKS;
+  $_CHECKS->{group_id}{default} = $site_group->id;
+  sub CHECKS {$_CHECKS}
+  sub WHERE { {disabled => 0, group_id => $_CHECKS->{group_id}{default}} }
 
   #merge with parent $SQL
   __PACKAGE__->SQL(GUEST_USER => 'SELECT * FROM users WHERE login_name = \'guest\'');
@@ -376,9 +389,37 @@ is(
 
 like(
   $SCLASS->SQL('SELECT'),
-  qr/SELECT.+FROM\s+users\sWHERE\sdisabled.+group_id='2'/x,
+  qr/SELECT.+FROM\s+users\sWHERE\sdisabled.+group_id='3'/x,
   'SELECT generated ok'
 );
+
+for (3 .. 5) {
+  my $user = $SCLASS->new(login_name => "user$_", login_password => time . $_ . 'a');
+  $user->save();
+  is($user->id, $_, 'User with id:' . $user->id . ' saved ok');
+  is($user->group_id, $site_group->id, 'User has group_id:' . $site_group->id . ' ok');
+}
+
+#test objects scalar and list contexts
+my $site_users =
+  $dbix->query('SELECT * FROM users WHERE group_id=?', $site_group->id)
+  ->objects($SCLASS);
+my @site_users =
+  $dbix->query('SELECT * FROM users WHERE group_id=?', $site_group->id)
+  ->objects($SCLASS);
+is_deeply($site_users, \@site_users, 'new_from_dbix_simple wantarray ok');
+
+#LIMIT
+$site_users = $dbix->query(
+  'SELECT * FROM users WHERE group_id=? ORDER BY id ASC ' . $SCLASS->SQL_LIMIT(2),
+  $site_group->id)->objects($SCLASS);
+is(scalar @$site_users, 2, 'LIMIT limits ok');
+$site_users = $dbix->query(
+  'SELECT * FROM users WHERE group_id=? ORDER BY id ASC ' . $SCLASS->SQL_LIMIT(2, 2),
+  $site_group->id)->objects($SCLASS);
+is(scalar @$site_users, 2, 'OFFSET offsets ok');
+is_deeply($site_users, [$site_users[-2], $site_users[-1]], 'OFFSET really offsets ok');
+
 
 done_testing();
 

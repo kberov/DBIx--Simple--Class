@@ -11,53 +11,66 @@ To install this module, run the following commands:
 
 DESCRIPTION
 
-This module is writen to replace most of the abstraction stuff from the base 
+This module is written to replace most of the abstraction stuff from the base 
 model class in the MYDLjE project on github, but can be used independently as well. 
 
-The class provides some useful methods which simplify representing rows from 
-tables as Perl objects. It is not intended to be a full featured ORM at all.
-It does not support relational mapping. This is left to the developer
-It is rather a database row abstraction. If you have to do complicated  SQL queries use directly 
-L<DBIx::Simple/query> method.  
-Last but not least, this module has no dependencies besides DBIx::Simple.
+The class provides useful methods which simplify representing rows from 
+tables as Perl objects and modifying them. It is not intended to be a full 
+featured ORM. It does not support relational mapping. 
+This is left to the developers using this class.
+
+DBIx::Simple::Class is a database table/row abstraction. 
+At the same time it is not just a fancy representation of a table row 
+like DBIx::Simple::Result::RowObject. 
+Usin this module will make your code more organized, clean and reliable
+(separation of concerns + field-validation). 
+You will even get some more performance over plain DBIx::Simple.
+Last but not least, this module has no other non-CORE dependencies besides DBIx::Simple.
+See below for details.
 
 SYNOPSIS
 
-  
   #1. In your class representing a template for a row in a database table or view
   package My::Model::AdminUser;
-  use base DBIx::Simple::Class;
+  use base qw(DBIx::Simple::Class);
 
   #sql to be used as table
-  sub TABLE { 'users' }
-  #alternative syntax: use constant TABLE =>'users';
+  sub TABLE { 'users' }  #or: use constant TABLE =>'users';
   
   sub COLUMNS {[qw(id group_id login_name login_password first_name last_name)]}
 
   #used to validate params to field-setters
-  my $_CHECKS = {
+  sub CHECKS{{
     id => { allow => qr/^\d+$/x },
-    group_id => { allow => qr/^\d+$/x },
+    group_id => { allow => qr/^1$/x, default=>1 },#admin group_id
     login_name => {required => 1, allow => qr/^\p{IsAlnum}{4,12}$/x},
+    first_name =>{required => 1, allow => \&avery_complex_check},
+    last_name =>{ allow => sub {
+        #less complex inline check that modifies the input value
+        #see Params::Check::allow and Params::Check::check
+      }
+    }
     #...
-  };
-  sub CHECKS{$_CHECKS}
+  }}
+  
+  sub WHERE { group_id=> 1} #select only users from admin group
+  
   1;#end of My::Model::AdminUser
 
-  #2. In as startup script or subroutine
-  $app->{dbix} = DBIx::Simple->connect(...);
-  #and/or
-  DBIx::Simple::Class->dbix( $app->{dbix} );
+  #2. In a start-up script or subroutine
+  DBIx::Simple::Class->dbix( DBIx::Simple->connect(...) );
 
   #3. usage 
   use My::Model::AdminUser;
   my $user = $dbix->select(
-    My::Model::AdminUser->TABLE,
-    '*',
-    {login_name => 'fred'}
+    My::Model::AdminUser->TABLE, '*', {login_name => 'fred'}
   )->object('My::Model::AdminUser')
-  $user->first_name('Fred')->last_name('Flintstone');
-  $user->save; #update user
+  
+  #or better (if SQL::Abstract is installed)
+  my $user = My::Model::AdminUser->select(login_name => 'fred'); #this is cleaner
+  
+  $user->first_name('Fred')->last_name('Flintstone'); #chainable setters
+  $user->save; #update row
   #....
   my $user = My::Model::AdminUser->new(
     login_name => 'fred',
@@ -68,11 +81,16 @@ SYNOPSIS
   print "new user has id:".$user->id;
   #...
   #select many
+  my $class = 'My::Model::AdminUser';
   my @admins = $dbix->select(
-    My::Model::AdminUser->TABLE,
-    My::Model::AdminUser->COLUMNS,
-    My::Model::AdminUser->WHERE
-  )->objects(My::Model::AdminUser);
+    $class->TABLE,
+    $class->COLUMNS,
+    $class->WHERE
+  )->objects($class);
+  #or
+  my @admins = $dbix->query(
+    $VERY_COMPLEX_SQL, @bind_variables
+  )->objects($class);
 
 
 SUPPORT AND DOCUMENTATION

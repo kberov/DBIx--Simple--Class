@@ -8,7 +8,7 @@ use Params::Check;
 use List::Util qw(first);
 use Carp;
 
-our $VERSION = '0.56';
+our $VERSION = '0.57';
 $Params::Check::WARNINGS_FATAL = 1;
 $Params::Check::CALLER_DEPTH   = $Params::Check::CALLER_DEPTH + 1;
 my $_attributes_made = {};
@@ -105,7 +105,19 @@ $SQL = {
         . $class->PRIMARY_KEY . '=?';
     };
   },
+
+  _LIMIT => sub {
+
+#works for MySQL, SQLite, PostgreSQL
+#TODO:See SQL::Abstract::Limit for other implementations and implement it using this interface
+    " LIMIT $_[1]" . ($_[2] ? " OFFSET $_[2] " : '');
+  },
 };
+
+sub SQL_LIMIT {
+  my $_LIMIT = $SQL->{_LIMIT};
+  return $_LIMIT->(@_);
+}
 
 sub SQL {
   my ($class, $args) = _get_obj_args(@_);    #class
@@ -116,7 +128,10 @@ sub SQL {
   }
 
   #a key
-  if (!ref $args) {
+  if ($args && !ref $args) {
+
+    #do not return hidden keys
+    croak("Named query '$args' is not ment for direct usage") if $args =~ /^_+/x;
 
     #allow subclasses to override parent sqls and cache produced SQL
     my $_SQL =
@@ -125,7 +140,7 @@ sub SQL {
       || $SQL->{$args}
       || $args;
     if (ref $_SQL) {
-      return $_SQL->($class);
+      return $_SQL->(@_);
     }
     else {
       return $_SQL;
@@ -157,6 +172,10 @@ sub new {
 
 sub new_from_dbix_simple {
   $_[0]->_make_field_attrs() unless $_attributes_made->{$_[0]};
+  if (wantarray) {
+    return (map { bless {data => $_, new_from_dbix_simple => 1}, $_[0]; }
+        @{$_[1]->{st}->{sth}->fetchall_arrayref({})});
+  }
   return bless {
 
     #$_[1]->hash
@@ -183,6 +202,8 @@ sub select_by_pk {
   return $class->dbix->query($SQL_CACHE->{$class}{SELECT_BY_PK}
       || $class->SQL('SELECT_BY_PK'), shift)->object($class);
 }
+
+*find = \&select_by_pk;
 
 sub _make_field_attrs {
   my $class = shift;
@@ -221,6 +242,9 @@ SUB
   if ($DEBUG) {
     carp($class . " generated accessors: $/$code$/$@$/");
   }
+
+  #make sure we die loudly
+  $class->dbix->{dbh}{RaiseError} = 1;
   return $_attributes_made->{$class} = 1;
 }
 
@@ -293,10 +317,8 @@ sub update {
     my $SET = join(', ', map { $_ . '=? ' } keys %{$self->{data}});
     'UPDATE ' . $self->TABLE . " SET $SET WHERE $pk=?";
   };
-  return eval {
-    $self->dbix->{dbh}->prepare_cached($self->{SQL_UPDATE})
-      ->execute(values %{$self->{data}}, $self->{data}{$pk});
-  } || croak($@ =~ s/ at \S+ line \d+\.\n\z//);
+  return $self->dbix->{dbh}->prepare($self->{SQL_UPDATE})
+    ->execute(values %{$self->{data}}, $self->{data}{$pk});
 
   #return $self->dbix->query($SQL, (map { $self->{data}{$_} } @columns));
 }
@@ -304,10 +326,16 @@ sub update {
 sub insert {
   my ($self) = @_;
   my ($pk, $class) = ($self->PRIMARY_KEY, ref $self);
-  eval {
-    $self->dbix->{dbh}->prepare($SQL_CACHE->{$class}{INSERT} || $class->SQL('INSERT'))
-      ->execute(map { $self->{data}{$_} } @{$self->COLUMNS});
-  } || croak($@ =~ s/ at \S+ line \d+\.\n\z//);
+
+  $self->dbix->{dbh}->prepare($SQL_CACHE->{$class}{INSERT} || $class->SQL('INSERT'))
+    ->execute(
+    map {
+
+      #set expected defaults
+      $self->data($_)
+      } @{$self->COLUMNS}
+    );
+
 
   return $self->{data}{$pk} =
     $self->dbix->{dbh}->last_insert_id(undef, undef, $self->TABLE, $pk);
@@ -330,7 +358,7 @@ sub insert {
 #--regex-perl=/^=head2\s+(.+)/-- \1/p,pod,Plain Old Documentation/
 #--regex-perl=/^=head[3-5]\s+(.+)/---- \1/p,pod,Plain Old Documentation/
 
-#__END__
+__END__
 
 =encoding utf8
 
@@ -374,6 +402,12 @@ See below for details.
     id => { allow => qr/^\d+$/x },
     group_id => { allow => qr/^1$/x, default=>1 },#admin group_id
     login_name => {required => 1, allow => qr/^\p{IsAlnum}{4,12}$/x},
+    first_name =>{required => 1, allow => \&avery_complex_check},
+    last_name =>{ allow => sub {
+        #less complex inline check that modifies the input value
+        #see Params::Check::allow and Params::Check::check
+      }
+    }
     #...
   }}
   
@@ -571,11 +605,21 @@ to show how the DBIx::Simple::Class interacts with L<DBIx::Simple>.
 See L<DBIx::Simple/Advanced_object_construction>.
 
   my $class = 'My::Model::AdminUser';
+  
+  #  ARRAY (context aware)
   my @admins = $dbix->select(
     $class->TABLE,
     $class->COLUMNS,
     $class->WHERE
   )->objects($class);
+  
+  #  ARRAYREF (context aware)
+  my $admins = $dbix->select(
+    $class->TABLE,
+    $class->COLUMNS,
+    $class->WHERE
+  )->objects($class);
+  
   #one row
   my $admin = $class->select(id=>123});#see below
   
@@ -619,7 +663,11 @@ Returns an instance of your class on success or C<undef> otherwise.
 
     my $user = My::User->select_by_pk(1234);
 
+=head2 find 
 
+An alias for L</select_by_pk>.
+
+    my $user = My::User->find(1234);
 
 =head2 data
 
@@ -700,6 +748,31 @@ cached for performance.
   my @members = $SU->query($SU->SQL('SELECT'));#allll ;)
   my @disabled = $SU->query($SU->SQL('DISABLED'), 1);
   my @enabled = $SU->query($SU->SQL('DISABLED'), 0);
+
+=head2 SQL_LIMIT
+
+Produces and returns a LIMIT clause SQL piece.
+Currently only MySQL, PostgreSQL and SQLite are supported but writing 
+your own should be fairly easy. See L<SQL::Abstarct::Limit>.
+  
+  # LIMIT 2
+  my $two_users = $dbix->query(
+    $CLASS->SQL('SELECT'). 'AND group_id=? ORDER BY id ASC '.$CLASS->SQL_LIMIT(2),
+    $group->id
+  )->objects($CLASS);
+  
+  # LIMIT 2 OFFSET 2
+ my $second_two_users = $dbix->query(
+    $CLASS->SQL('SELECT'). 'AND group_id=? ORDER BY id ASC '.$CLASS->SQL_LIMIT(2,2), 
+    $group->id
+  )->objects($CLASS);
+
+  # LIMIT 2 OFFSET 4
+ my $third_two_users = $dbix->query(
+    $CLASS->SQL('SELECT'). 'AND group_id=? ORDER BY id ASC '.$CLASS->SQL_LIMIT(2,4), 
+    $group->id
+  )->objects($CLASS);
+
 
 =head1 EXAMPLES
 
