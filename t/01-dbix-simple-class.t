@@ -13,7 +13,9 @@ BEGIN {
   eval { DBD::SQLite->VERSION >= 1 }
     or plan skip_all => 'DBD::SQLite >= 1.00 required';
 }
+local $Params::Check::VERBOSE = 0;
 use DBIx::Simple::Class;
+
 my $DSC = 'DBIx::Simple::Class';
 
 # In memory database! No file permission troubles, no I/O slowness.
@@ -216,8 +218,8 @@ ok(My::Group->can('group_name'), 'can group_name');
 ok($group = My::Group->new, 'My::Group->new ok');
 ok($group->id(1), '$group->id(1) ok');
 ok($group->data('lala' => 1), 'can not lala ok');
-is_deeply($group->data(), {id => 1}, '"There is not such field lala" ok');
 My::Group->DEBUG(0);
+is_deeply($group->data(), {id => 1}, '"There is not such field lala" ok');
 
 #insert
 My::Group->CHECKS->{id}         = {allow => qr/^\d+$/};
@@ -247,8 +249,7 @@ is($user->save,                           1, 'user inserted ok');
 
 #update dies
 $g2->{SQL_UPDATE} = 'UPDATE xx "BOOM';
-like((eval { $g2->update }, $@),
-  qr/prepare\sfailed/x, '"prepare failed" croaks ok');
+like((eval { $g2->update }, $@), qr/prepare\sfailed/x, '"prepare failed" croaks ok');
 delete $DSC->_attributes_made->{'My::User'};
 ok(
   $user =

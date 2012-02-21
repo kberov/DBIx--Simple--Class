@@ -1,8 +1,11 @@
 Revision history for DBIx::Simple::Class
 
-0.58    2012-02-21 02:00:49 EET
+0.58    2012-02-22 00:50:18 EET
         - Added documentation for "delete"
         - fixed potential bug with pre-set primary key
+        - No warnings from Params::Check in tests anymore
+        - Moved POD to Checks.pod for easier spellchecking. Spellcheck.
+        
 0.57    2012-02-20 16:28:56 EET
         - Happy birthday to me! This release is my present for my self and everyone else!
         - Fixed new_from_dbix_simple to be context aware
