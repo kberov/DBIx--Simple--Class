@@ -109,7 +109,8 @@ $SQL = {
   _LIMIT => sub {
 
 #works for MySQL, SQLite, PostgreSQL
-#TODO:See SQL::Abstract::Limit for other implementations and implement it using this interface
+#TODO:See SQL::Abstract::Limit for other implementations 
+#and implement it using this technique.
     " LIMIT $_[1]" . ($_[2] ? " OFFSET $_[2] " : '');
   },
 };
@@ -336,8 +337,8 @@ sub insert {
       } @{$self->COLUMNS}
     );
 
-
-  return $self->{data}{$pk} =
+  #user set the primary key already
+  return $self->{data}{$pk} ||=
     $self->dbix->{dbh}->last_insert_id(undef, undef, $self->TABLE, $pk);
 
 }
@@ -358,7 +359,7 @@ sub insert {
 #--regex-perl=/^=head2\s+(.+)/-- \1/p,pod,Plain Old Documentation/
 #--regex-perl=/^=head[3-5]\s+(.+)/---- \1/p,pod,Plain Old Documentation/
 
-__END__
+#__END__
 
 =encoding utf8
 
@@ -714,6 +715,16 @@ retrieved from the table. Returns true on success.
   )->object('My::Model::AdminUser')
   $user->first_name('Fred')->last_name('Flintstone');
   $user->update;
+
+=head2 delete
+
+There is no C<delete> method. This is on purpose. 
+Use L</dbix> or write one for your self. It's easy.
+    
+  #suicide
+  $user->dbix->query('DELETE FROM users WHERE id=?',$user->id);
+  #resurrect
+  $user->insert;
 
 =head2 SQL
 
