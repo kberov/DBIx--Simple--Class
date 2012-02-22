@@ -116,15 +116,11 @@ like(
 
 ok($user = My::User->new(login_password => $password));
 
-like(
-  (eval { $user->_make_field_attrs() }, $@),
-  qr/Call this method as/,
-  '_make_field_attrs() ok'
-);
+like((eval { $user->BUILD() }, $@), qr/Call this method as/, 'BUILD() ok');
 is(
-  My::User->_make_field_attrs(),
+  My::User->BUILD(),
   $DSC->_attributes_made->{'My::User'},
-  'if (eval $code) in _make_field_attrs() ok'
+  'if (eval $code) in BUILD() ok'
 );
 isa_ok(ref($user), $DSC);
 
@@ -195,7 +191,7 @@ like(
 
 delete My::Group->COLUMNS->[-1];
 like(
-  (eval { My::Group->_make_field_attrs() }, $@),
+  (eval { My::Group->BUILD() }, $@),
   qr/Illegal declaration of subroutine/,
   '"Illegal declaration of subroutine" ok'
 );
