@@ -29,7 +29,7 @@ See below for details.
   
   #1. In your class representing a template for a row in a database table or view
   package My::Model::AdminUser;
-  use base qw(DBIx::Simple::Class);
+  use base qw(DBIx::Simple::Class);#this is your base class or a class that extends it
 
   #sql to be used as table
   sub TABLE { 'users' }  #or: use constant TABLE =>'users';
@@ -266,6 +266,15 @@ See L<DBIx::Simple/Advanced_object_construction>.
   #The above is about 3 times faster than this below
   $dbix->query('SELECT * FROM users WHERE id=?',2)
             ->object(':RowObject')->login_name;
+
+=head2 BUILD
+
+Class method. 
+This is your real class builder. It is called in L</new> and L</new_from_dbix_simple> 
+only once before L<bless>. It creates your accessors and does other things if needed. 
+You can inject your logic here if you overridethis method. In your C<BUILDER> do not forget
+ to call C<$class-E<gt>SUPER::BUILD>. Take a look at the source of this class to make sure
+ what exactly you need to do.
 
 =head2 query
 

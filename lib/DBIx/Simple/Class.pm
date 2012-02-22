@@ -166,13 +166,13 @@ sub new {
   my ($class, $fields) = _get_obj_args(@_);
   $fields = Params::Check::check($class->CHECKS, $fields)
     || croak(Params::Check::last_error());
-  $class->_make_field_attrs()
+  $class->BUILD()
     unless $_attributes_made->{$class};
   return bless {data => $fields}, $class;
 }
 
 sub new_from_dbix_simple {
-  $_[0]->_make_field_attrs() unless $_attributes_made->{$_[0]};
+  $_[0]->BUILD() unless $_attributes_made->{$_[0]};
   if (wantarray) {
     return (map { bless {data => $_, new_from_dbix_simple => 1}, $_[0]; }
         @{$_[1]->{st}->{sth}->fetchall_arrayref({})});
@@ -206,7 +206,7 @@ sub select_by_pk {
 
 *find = \&select_by_pk;
 
-sub _make_field_attrs {
+sub BUILD {
   my $class = shift;
   (!ref $class)
     || croak("Call this method as $class->make_field_attrs()");
