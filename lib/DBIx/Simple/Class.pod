@@ -216,8 +216,8 @@ Flag to enable/disable debug warnings. Influences all DBIx::Simple::Class subcla
 =head2 new
 
 Constructor.  
-Accessors listed in COLUMNS are generated on first call for the fields described in 
-L</COLUMNS>. On any subsequent call field-accessors are not generated. 
+Accessors listed in COLUMNS are generated on first object construction. 
+On any subsequent call field-accessors are not generated. 
 Accepts named parameters or a HASHREF containing named parameters.
 Sets the passed parameters as fields if they exists 
 as column names.
