@@ -7,22 +7,19 @@ DBIx::Simple::Class - Advanced object construction for DBIx::Simple!
 
 =head1 DESCRIPTION
 
-This module is written to replace most of the abstraction stuff from the base 
-model class in the MYDLjE project on github, but can be used independently as well. 
+This module is written to replace most of the abstraction stuff from the base model
+ class in the MYDLjE project on github, but can be used independently as well.
 
-The class provides useful methods which simplify representing rows from 
-tables as Perl objects and modifying them. It is not intended to be a full 
-featured ORM. It does not support relational mapping. 
-This is left to the developers using this class.
+The class provides useful methods which simplify representing rows from tables as Perl
+ objects and modifying them. It is not intended to be a full featured ORM. It does not
+ provide relational mapping (yet...). This is left to the developers using this class.
 
-DBIx::Simple::Class is a database table/row abstraction. 
-At the same time it is not just a fancy representation of a table row 
-like DBIx::Simple::Result::RowObject. 
-Using this module will make your code more organized, clean and reliable
-(separation of concerns + field-validation). 
-You will even get some more performance over plain DBIx::Simple.
-Last but not least, this module has no other non-CORE dependencies besides DBIx::Simple.
-See below for details.
+DBIx::Simple::Class is a database table/row abstraction. At the same time it is not just
+ a fancy representation of a table row like DBIx::Simple::Result::RowObject. Using this
+ module will make your code more organized, clean and reliable (separation of concerns +
+ input-validation). You will even get some more performance over plain DBIx::Simple
+ while keeping its' sexy features when you need them.Last but not least, this module 
+ has no other non-CORE dependencies besides DBIx::Simple. See below for details.
 
 =head1 SYNOPSIS
 
@@ -489,6 +486,10 @@ Jos Boumans for Params::Check
 Juerd Waalboer for DBIx::Simple
 
 Nate Wiger  and all contributors for SQL::Abstract
+
+=head1 DEPENDENCIES
+
+L<DBIx::Simple>, L<DBI>, L<DBD::SQLite> (for running tests only)
 
 =head1 BUGS
 

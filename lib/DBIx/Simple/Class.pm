@@ -51,7 +51,11 @@ sub QUOTE_IDENTIFIERS {
   return $QUOTE_IDENTIFIERS->{$class};
 }
 my $UNQUOTED = {};
-sub _UNQUOTED {$UNQUOTED}
+sub _UNQUOTED {
+  my ($class) = shift;    #class
+  $class = ref $class if ref $class;
+  return $UNQUOTED->{$class} ||= {} 
+}
 my $SQL_CACHE = {};
 my $SQL       = {};
 $SQL = {
@@ -222,8 +226,13 @@ sub BUILD {
   my $class = shift;
   (!ref $class)
     || croak("Call this method as $class->BUILD()");
+  $class->_UNQUOTED->{TABLE}   = $class->TABLE;
+  $class->_UNQUOTED->{WHERE}   = {%{$class->WHERE}};      #copy
+  $class->_UNQUOTED->{COLUMNS} = [@{$class->COLUMNS}];    #copy
+  #warn Data::Dumper->Dump([$UNQUOTED],[qw($UNQUOTED)]);
   my $code = '';
-  foreach (@{$class->COLUMNS}) {
+  foreach (@{$class->_UNQUOTED->{COLUMNS}}) {
+
     my $alias = $class->ALIASES->{$_} || $_;
     croak("You can not use '$alias' as a column name since it is already defined in "
         . __PACKAGE__
@@ -246,24 +255,26 @@ sub $class\::$alias {
 SUB
 
   }
-  $class->_UNQUOTED->{TABLE}   = $class->TABLE;
-  $class->_UNQUOTED->{WHERE}   = {%{$class->WHERE}};      #copy
-  $class->_UNQUOTED->{COLUMNS} = [@{$class->COLUMNS}];    #copy
+
   if ($class->QUOTE_IDENTIFIERS) {
     my $dbh = $class->dbh;
     my $sep = $dbh->get_info(29);                         # SQL_IDENTIFIER_QUOTE_CHAR
     $code
       .= 'no warnings qw"redefine";'
       . "sub $class\::TABLE {'"
-      . $class->dbh->quote_identifier($class->TABLE) . "'}";
-    for (keys %{$class->WHERE}) {
-      $class->WHERE->{$sep . $class->dbh->quote_identifier($_) . $sep} =
-        delete $class->WHERE->{$_};
+      . $dbh->quote_identifier($class->TABLE) . "'}";
+    my %where = %{$class->WHERE};
+    $code .="sub $class\::WHERE {{";      
+    for (keys %where) {
+      $code .='qq{'.$dbh->quote_identifier($_).'}=>qq{'.$dbh->quote($where{$_}).'}, '.$/;
     }
-    for (0 .. @{$class->COLUMNS} - 1) {
-      $class->COLUMNS->[$_] =
-        $sep . $class->dbh->quote_identifier($class->COLUMNS->[$_]) . $sep;
+    $code .='}}#end WHERE'.$/;
+    my @columns = @{$class->COLUMNS};
+    $code .="sub $class\::COLUMNS {["; 
+    for (@columns) {
+      $code .='qq{'.$dbh->quote_identifier($_).'},';
     }
+    $code .=']}#end COLUMNS'.$/;
   }    #if ($class->QUOTE_IDENTIFIERS)
   $code .= "$/1;";
 
@@ -313,7 +324,7 @@ sub data {
   if (ref $args && keys %$args) {
     for my $field (keys %$args) {
       my $alias = $self->ALIASES->{$field} || $field;
-      unless (first { $field eq $_ } @{$self->COLUMNS()}) {
+      unless (first { $field eq $_ } @{$self->_UNQUOTED->{COLUMNS}}) {
         Carp::cluck(
           "There is not such field $field in table " . $self->TABLE . '! Skipping...')
           if $DEBUG;
@@ -369,13 +380,12 @@ sub insert {
   my ($self) = @_;
   my ($pk, $class) = ($self->PRIMARY_KEY, ref $self);
 
-  $self->dbh->prepare($SQL_CACHE->{$class}{INSERT} || $class->SQL('INSERT'))->execute(
-    map {
-
+  $self->dbh->prepare(
+                      $SQL_CACHE->{$class}{INSERT} || $class->SQL('INSERT')
+                    )->execute(map {
       #set expected defaults
       $self->data($_)
-      } @{$self->COLUMNS}
-  );
+      } @{$class->_UNQUOTED->{COLUMNS}});
 
   #user set the primary key already
   return $self->{data}{$pk}

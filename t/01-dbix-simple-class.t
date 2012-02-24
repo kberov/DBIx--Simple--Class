@@ -435,7 +435,8 @@ warn Dumper $SCLASS->_UNQUOTED;
 my $my_groups_table = <<"T";
 CREATE TABLE "my groups"(
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  "group" VARCHAR(12)
+  "group" VARCHAR(12),
+  "is' enabled" INT DEFAULT 0
   )
 T
 
@@ -450,9 +451,11 @@ $dbix->query($my_groups_table);
   sub COLUMNS { ['id', 'group', 'is\' enabled'] }    #problem
 
   sub ALIASES {
-    { 'is\' enabled' => 'is_enabled' }
+    { 'is\' enabled' => 'is_enabled',}
   }
+  
   sub WHERE { {'is enabled' => 1} }
+  sub CHECKS {{'is\' enabled'=>{allow =>qr/^[01]$/}, id   => {allow   => qr/^\d+$/x},}}
   __PACKAGE__->QUOTE_IDENTIFIERS(1);                 #no problem now
   __PACKAGE__->BUILD;
 }
@@ -463,8 +466,8 @@ warn Dumper(
   }
 );
 
-warn MyGoups->TABLE;
-is(MyGoups->TABLE, '"my groups"', 'IDENTIFIERS quoted ok');
+is(MyGoups->TABLE, '"my groups"', 'table IDENTIFIER quoted ok');
+is(eval{MyGoups->new('is\' enabled'=>1)->insert}||$@ =>1=>'quoteD_identifier inserts ok');
 done_testing();
 
 
