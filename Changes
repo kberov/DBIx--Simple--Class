@@ -1,13 +1,16 @@
 Revision history for DBIx::Simple::Class
 
-0.58    2012-02-22 00:50:18 EET
-        - Added documentation for "delete"
-        - fixed potential bug with pre-set primary key
-        - No warnings from Params::Check in tests anymore
-        - Moved POD to Checks.pod for easier spellchecking. Spellcheck.
+0.60    2012-02-25 00:31:08 EET
+        - This is a major release! API seems pretty stable and complete enough.
+        - Added documentation for "delete".
+        - Fixed potential bug with pre-set primary key.
+        - No warnings from Params::Check in tests anymore.
+        - Improved and moved POD to Checks.pod for easier spellchecking. Spellcheck.
         - Renamed _make_field_attrs() to BUILD() and added documentation,
           thus allowing developers to inject their custom logic officially :).
-        - Updated README
+        - Added DBI callback to dump the prepared SQL query if DEBUG(1).
+        - Added QUOTE_IDENTIFIERS flag to quote bad table/column names.
+        - Updated README.
         
 0.57    2012-02-20 16:28:56 EET
         - Happy birthday to me! This release is my present for my self and everyone else!

@@ -1,4 +1,3 @@
-
 =encoding utf8
 
 =head1 NAME
@@ -18,22 +17,23 @@ DBIx::Simple::Class is a database table/row abstraction. At the same time it is 
  a fancy representation of a table row like DBIx::Simple::Result::RowObject. Using this
  module will make your code more organized, clean and reliable (separation of concerns +
  input-validation). You will even get some more performance over plain DBIx::Simple
- while keeping its' sexy features when you need them.Last but not least, this module 
- has no other non-CORE dependencies besides DBIx::Simple. See below for details.
+ while keeping its' sexy features when you need them. Last but not least, this module 
+ has no other non-CORE dependencies besides DBIx::Simple and DBI. See below for details.
 
 =head1 SYNOPSIS
 
   
-  #1. In your class representing a template for a row in a database table or view
+  #1. In your class representing a description of a row in a database table or view
   package My::Model::AdminUser;
-  use base qw(DBIx::Simple::Class);#this is your base class or a class that extends it
+  #this is your base class. You can put your own common class that extends it here
+  use base qw(DBIx::Simple::Class);
 
   #sql to be used as table
   sub TABLE { 'users' }  #or: use constant TABLE =>'users';
   
   sub COLUMNS {[qw(id group_id login_name login_password first_name last_name)]}
 
-  #used to validate params to field-setters
+  #used to validate params to auto-generated or your own field-setters
   sub CHECKS{{
     id => { allow => qr/^\d+$/x },
     group_id => { allow => qr/^1$/x, default=>1 },#admin group_id
@@ -47,14 +47,15 @@ DBIx::Simple::Class is a database table/row abstraction. At the same time it is 
     #...
   }}
   
-  sub WHERE { group_id=> 1} #select only users from admin group
+  #select only rows (instantiate objects) that meet a requirement
+  sub WHERE { group_id=> 1} 
   
   1;#end of My::Model::AdminUser
 
-  #2. In a start-up script or subroutine
+  #2. In a start-up script or subroutine instantiate DBIx::Simple once
   DBIx::Simple::Class->dbix( DBIx::Simple->connect(...) );
 
-  #3. usage 
+  #3. ...and use it everywhere in your application 
   use My::Model::AdminUser;
   my $user = $dbix->select(
     My::Model::AdminUser->TABLE, '*', {login_name => 'fred'}
@@ -63,18 +64,23 @@ DBIx::Simple::Class is a database table/row abstraction. At the same time it is 
   #or better (if SQL::Abstract is installed)
   my $user = My::Model::AdminUser->select(login_name => 'fred'); #this is cleaner
   
+  #or simply get the admin-user with id=2 
+  My::Model::AdminUser->find(2);
+  
+  #then...
   $user->first_name('Fred')->last_name('Flintstone'); #chainable setters
   $user->save; #update row
-  #....
+  
+  #add new
   my $user = My::Model::AdminUser->new(
-    login_name => 'fred',
-    first_name => 'Fred',
-    last_name =>'Flintstone'
+    login_name => 'петър',
+    first_name => 'Петър',
+    last_name =>'Павлов'
   );
   $user->save();#insert new user
   print "new user has id:".$user->id;
-  #...
-  #select many
+  
+  #select many users
   my $class = 'My::Model::AdminUser';
   my @admins = $dbix->select(
     $class->TABLE,
@@ -93,12 +99,13 @@ DBIx::Simple::Class is a database table/row abstraction. At the same time it is 
 
 You B<must> define it in your subclass. This is the table where 
 your object will store its data. Must return a string - the table name. 
+It is used  internally in L</select> L</update> and L</insert> when saving object data.
 And with little imagination you could put here some complex SQL or 
 an already prepared view: 
 
   (SELECT * FROM users WHERE column1='something' column2='other')
 
-It is used  internally in L</select> L</update> and L</insert> when saving object data.
+Of course rows from such "table" can not be updated without overriding L</update>.
 
   sub TABLE { 'users' }
   #using DBIx::Simple select() or query()
@@ -107,7 +114,9 @@ It is used  internally in L</select> L</update> and L</insert> when saving objec
 =head2 WHERE
 
 A HASHREF suitable for passing to L<DBIx::Simple/select>. 
-It is also used  internally in L</select>.
+It is also used  internally in L</select> and L</update>. 
+Values can be only simple scalars (which may be valid SQL).
+
 Default C<WHERE> clause for your class. Empty "C<{}>" by default.
 This constant is optional.
 
@@ -117,11 +126,13 @@ This constant is optional.
   use My::PublishedNote;
   #somewhere in your application
   my $note = My::PublishedNote->select(id=>12345);
-                                                      
+
+
 =head2 COLUMNS
 
+
 You B<must> define it in your subclass. 
-It must return an ARRAY-REF with table columns to which the data is written.
+It must return an ARRAYREF with table columns to which the data is written.
 It is used  in L<DBIx::Simple/select> when retrieving a row from the database 
 and when saving object data. This list is also used to generate specific 
 getters and setters for each data-field.
@@ -200,26 +211,38 @@ to the current DBIx::Simple instance (with L<SQL::Abstract> support eventually :
   __PACKAGE__->dbix->query(...);#same instance
   dbix->query(...);#same instance
 
+=head2 dbh
+
+Shortcut for C<$self->dbix->dbh>.
+
 =head2 DEBUG
 
-Flag to enable/disable debug warnings. Influences all DBIx::Simple::Class subclasses.
+Flag to enable/disable debug warnings and prepared SQL dumps. 
+ Influences all DBIx::Simple::Class subclasses.
 
   DBIx::Simple::Class->DEBUG(1);
-  my $note = My::Note->new;# see in the log what methods are generated for your columns
-  DBIx::Simple::Class->DEBUG(0);
+  My::Note->find(2)->title('Better Title')->save;
+  # see in the log what methods are generated for your columns
+  #and what SQL is thrown to the database.
+  DBIx::Simple::Class->DEBUG(0);#enough
 
 =head2 QUOTE_IDENTIFIERS
 
 Class attribute. If set to a true value your columns and table names will 
 be quoted upon first instantiation of your subclass. When you call
  C<$self-E<gt>TABLE> it will return a quoted table-name using 
- L<DBI/quote_identifier>. Same will happen with L</COLUMNS>.
+ L<DBI/quote_identifier>. Same will happen with L</COLUMNS> and L</WHERE>.
  This is needed when you have tables and columns with invalid identifier names.
 
-  sub TABLE {'my groups'}#problem
-  sub COLUMNS {['id','group']}#problem
+  package MyGoups;
+  use base 'DBIx::Simple::Class';  
+  sub TABLE {'my groups'}#problem - invalid identifier name
+  sub COLUMNS {['id','group']}#problem - collides with 'group by'
   __PACKAGE__->QUOTE_IDENTIFIERS(1);#no problem now
- 
+  
+  #just works
+  MyGoups->find(2)->group('name_second')->update;
+
 =head1 METHODS
 
 =head2 new
@@ -228,8 +251,8 @@ Constructor.
 Accessors listed in COLUMNS are generated on first object construction. 
 On any subsequent call field-accessors are not generated. 
 Accepts named parameters or a HASHREF containing named parameters.
-Sets the passed parameters as fields if they exists 
-as column names.
+Sets the passed parameters as fields (if they exist) as column names.
+
   
   my $user = My::User->new(
     login_name => 'fred',
@@ -279,10 +302,9 @@ See L<DBIx::Simple/Advanced_object_construction>.
 =head2 BUILD
 
 Class method. 
-This is your real class builder. It is called in L</new> and 
-L</new_from_dbix_simple> only once before L<bless>. It creates your accessors 
-and does other things if needed. You can inject your logic here if you 
-overridethis method. In your C<BUILD> do not forget to call 
+This is your real class builder. It is called in constructors only once before L<bless>.
+ It creates your accessors quotes identifiers if needed. You can inject your logic here 
+ if you override this method. In your C<BUILD> do not forget to call 
 C<$class-E<gt>SUPER::BUILD>. Take a look at the source of this class to make 
 sure what exactly you need to do. You can also call this method at the end
 of your class definition. It will not be called again.
@@ -426,7 +448,7 @@ cached for performance.
   use base qw(My::User);#a subclass of DBIx::Simple::Class
   sub WHERE { {disabled => 0, group_id => 2} }
   
-  #these could be very complex and retreived from a file where you keep them!
+  #these could be very complex and retrieved from a file where you keep them!
   __PACKAGE__->SQL(
     GUEST => 'SELECT * FROM users WHERE login_name = \'guest\'',
     DISABLED => sub{
@@ -530,9 +552,14 @@ L<http://search.cpan.org/dist/DBIx-Simple-Class/>
 
 =head1 SEE ALSO
 
-L<DBIx::Simple>, L<DBIx::Simple::Result::RowObject>, L<DBIx::Simple::OO> 
-L<DBIx::Class>, L<Data::ObjectDriver>,L<Class::DBI>, L<Class::DBI::Lite>, 
-L<SQL::Abstract>, L<Params::Check>
+L<DBIx::Simple>, L<Params::Check> and L<DBI> are used directly and we depend on them.
+ L<SQL::Abstract> is nice to have but not mandatory.
+The modules below are used to cherry-pick ideas and re-implement some of them
+in this package.
+
+L<DBIx::Simple::Result::RowObject>, L<DBIx::Simple::OO>,
+L<Ima::DBI>, L<DBIx::Class>, L<Data::ObjectDriver>,L<Class::DBI>, 
+L<Class::DBI::Lite>
 L<https://github.com/kberov/MYDLjE>
 
 

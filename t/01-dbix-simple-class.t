@@ -407,6 +407,11 @@ my @site_users =
 is_deeply($site_users, \@site_users, 'new_from_dbix_simple wantarray ok');
 
 #LIMIT
+like(
+  (eval { $DSC->SQL('_LIMIT') } || $@),
+  qr/Named query '_LIMIT' is not ment/,
+  '$DSC->SQL(_LIMIT) croaks ok'
+);
 $site_users = $dbix->query(
   'SELECT * FROM users WHERE group_id=? ORDER BY id ASC ' . $SCLASS->SQL_LIMIT(2),
   $site_group->id)->objects($SCLASS);
@@ -430,8 +435,7 @@ is_deeply(
   },
   '_UNQUOTED ok'
 );
-use Data::Dumper;
-warn Dumper $SCLASS->_UNQUOTED;
+
 my $my_groups_table = <<"T";
 CREATE TABLE "my groups"(
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -451,23 +455,77 @@ $dbix->query($my_groups_table);
   sub COLUMNS { ['id', 'group', 'is\' enabled'] }    #problem
 
   sub ALIASES {
-    { 'is\' enabled' => 'is_enabled',}
+    { 'is\' enabled' => 'is_enabled', }
   }
-  
+
   sub WHERE { {'is enabled' => 1} }
-  sub CHECKS {{'is\' enabled'=>{allow =>qr/^[01]$/}, id   => {allow   => qr/^\d+$/x},}}
-  __PACKAGE__->QUOTE_IDENTIFIERS(1);                 #no problem now
+
+  sub CHECKS {
+    {
+      'is\' enabled' => {allow    => qr/^[01]$/},
+        id           => {allow    => qr/^\d+$/x},
+        group        => {required => 1, allow => qr/^\w+$/}
+    }
+  }
+  __PACKAGE__->QUOTE_IDENTIFIERS(1);    #no problem now
   __PACKAGE__->BUILD;
 }
-warn Dumper(
-  { TABLE   => MyGoups->TABLE,
-    COLUMNS => MyGoups->COLUMNS,
-    WHERE   => MyGoups->WHERE
-  }
-);
 
 is(MyGoups->TABLE, '"my groups"', 'table IDENTIFIER quoted ok');
-is(eval{MyGoups->new('is\' enabled'=>1)->insert}||$@ =>1=>'quoteD_identifier inserts ok');
+is(eval { MyGoups->new('is\' enabled' => 1, group => 'name1')->insert }
+    || $@ => 1 => 'quoteD_identifier inserts ok');
+is(eval { MyGoups->new('is\' enabled' => 1, group => 'name2')->save } || $@,
+  2, 'quoteD_identifier inserts ok2');
+
+isa_ok(eval { $g2 = MyGoups->find(2) }
+    || $@ => MyGoups => 'quoteD_identifier finds ok');
+is_deeply(
+  $g2->data,
+  { 'group'        => 'name2',
+    'is\' enabled' => 1,
+    'id'           => 2
+  },
+  'quoteD_identifier data ok'
+);
+
+is(eval { $g2->group('name_second')->update } || $@, 1,
+  'quoteD_identifier updates ok2');
+
+is_deeply(
+  $g2->data,
+  { 'group'        => 'name_second',
+    'is\' enabled' => 1,
+    'id'           => 2
+  },
+  'quoteD_identifier data after update ok'
+);
+is_deeply(
+  MyGoups->find(2)->data,
+  { 'group'        => 'name_second',
+    'is\' enabled' => 1,
+    'id'           => 2
+  },
+  'quoteD_identifier updated data found ok'
+);
+
+#this will make it die since identifiers are already quoted and become double quoted
+delete $DSC->_attributes_made->{MyGoups};
+like(
+  eval { MyGoups->find(2) } || $@,
+  qr/'"""my\sgroups"""'/x,
+  'quoteD already identifier  ok'
+);
+
+like(eval { MyGoups->query(MyGoups->SQL('SELECT') . ' and id=?', 2) } || $@,
+  qr/'"""my\sgroups"""'/x, 'quoteD already identifier  ok2');
+if (eval { MyGoups->dbix->abstract }) {
+  like(eval { MyGoups->select(id => 2) } || $@,
+    qr/'"""my\sgroups"""'/x, 'quoteD already identifier  ok3');
+
+}
+
+#warn Dumper($g2->data);
+
 done_testing();
 
 

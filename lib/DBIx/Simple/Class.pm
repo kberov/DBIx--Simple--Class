@@ -8,10 +8,10 @@ use Params::Check;
 use List::Util qw(first);
 use Carp;
 
-our $VERSION = '0.57';
+our $VERSION = '0.60';
 $Params::Check::WARNINGS_FATAL = 1;
 $Params::Check::CALLER_DEPTH   = $Params::Check::CALLER_DEPTH + 1;
-my $_attributes_made = {};
+
 
 #CONSTANTS
 
@@ -50,14 +50,22 @@ sub QUOTE_IDENTIFIERS {
   return $QUOTE_IDENTIFIERS->{$class} = $yes_no if defined $yes_no;
   return $QUOTE_IDENTIFIERS->{$class};
 }
+
 my $UNQUOTED = {};
+
 sub _UNQUOTED {
   my ($class) = shift;    #class
   $class = ref $class if ref $class;
-  return $UNQUOTED->{$class} ||= {} 
+  return $UNQUOTED->{$class} ||= {};
 }
+
+#for outside modification during tests
+my $_attributes_made = {};
+sub _attributes_made {$_attributes_made}
 my $SQL_CACHE = {};
-my $SQL       = {};
+sub _SQL_CACHE {$SQL_CACHE}
+
+my $SQL = {};
 $SQL = {
   SELECT => sub {
     my $class = shift;
@@ -214,10 +222,10 @@ sub query {
 }
 
 sub select_by_pk {
-  my $class = shift;
+  my ($class, $pk) = @_;
   $class->BUILD() unless $_attributes_made->{$class};
   return $class->dbix->query($SQL_CACHE->{$class}{SELECT_BY_PK}
-      || $class->SQL('SELECT_BY_PK'), shift)->object($class);
+      || $class->SQL('SELECT_BY_PK'), $pk)->object($class);
 }
 
 *find = \&select_by_pk;
@@ -229,6 +237,7 @@ sub BUILD {
   $class->_UNQUOTED->{TABLE}   = $class->TABLE;
   $class->_UNQUOTED->{WHERE}   = {%{$class->WHERE}};      #copy
   $class->_UNQUOTED->{COLUMNS} = [@{$class->COLUMNS}];    #copy
+
   #warn Data::Dumper->Dump([$UNQUOTED],[qw($UNQUOTED)]);
   my $code = '';
   foreach (@{$class->_UNQUOTED->{COLUMNS}}) {
@@ -238,7 +247,7 @@ sub BUILD {
         . __PACKAGE__
         . '. Please define an \'alias\' for the column to be used as method.')
       if __PACKAGE__->can($alias);
-    next if $class->can($alias);    #careful: no redefine
+    next if $class->can($alias);                          #careful: no redefine
     $code = "use strict;$/use warnings;$/use utf8;$/" unless $code;
     $code .= <<"SUB";
 sub $class\::$alias {
@@ -258,23 +267,28 @@ SUB
 
   if ($class->QUOTE_IDENTIFIERS) {
     my $dbh = $class->dbh;
-    my $sep = $dbh->get_info(29);                         # SQL_IDENTIFIER_QUOTE_CHAR
+    my $sep = $dbh->get_info(29);    # SQL_IDENTIFIER_QUOTE_CHAR
     $code
       .= 'no warnings qw"redefine";'
       . "sub $class\::TABLE {'"
       . $dbh->quote_identifier($class->TABLE) . "'}";
     my %where = %{$class->WHERE};
-    $code .="sub $class\::WHERE {{";      
+    $code .= "sub $class\::WHERE {{";
     for (keys %where) {
-      $code .='qq{'.$dbh->quote_identifier($_).'}=>qq{'.$dbh->quote($where{$_}).'}, '.$/;
+      $code
+        .= 'qq{'
+        . $dbh->quote_identifier($_)
+        . '}=>qq{'
+        . $dbh->quote($where{$_}) . '}, '
+        . $/;
     }
-    $code .='}}#end WHERE'.$/;
+    $code .= '}}#end WHERE' . $/;
     my @columns = @{$class->COLUMNS};
-    $code .="sub $class\::COLUMNS {["; 
+    $code .= "sub $class\::COLUMNS {[";
     for (@columns) {
-      $code .='qq{'.$dbh->quote_identifier($_).'},';
+      $code .= 'qq{' . $dbh->quote_identifier($_) . '},';
     }
-    $code .=']}#end COLUMNS'.$/;
+    $code .= ']}#end COLUMNS' . $/;
   }    #if ($class->QUOTE_IDENTIFIERS)
   $code .= "$/1;";
 
@@ -287,7 +301,8 @@ SUB
     $class->dbh->{Callbacks} = {
       prepare => sub {
         my ($dbh, $query, $attrs) = @_;
-        carp("Preparing query:\n$query\n");
+        my ($package, $filename, $line, $subroutine) = caller(1);
+        carp("SQL from $subroutine in $filename:$line :\n$query\n");
         return;
       },
     };
@@ -301,9 +316,6 @@ SUB
   return $_attributes_made->{$class} = 1;
 }
 
-#for outside modification during tests
-sub _attributes_made {$_attributes_made}
-sub _SQL_CACHE       {$SQL_CACHE}
 
 #conveninece for getting key/vaule arguments
 sub _get_args {
@@ -366,11 +378,13 @@ sub update {
   my ($self) = @_;
   my $pk = $self->PRIMARY_KEY;
   $self->{data}{$pk} || croak('Please define primary key column (\$self->$pk(?))!');
+  my $dbh = $self->dbh;
   $self->{SQL_UPDATE} ||= do {
-    my $SET = join(', ', map { $_ . '=? ' } keys %{$self->{data}});
+    my $SET =
+      join(', ', map { $dbh->quote_identifier($_) . '=? ' } keys %{$self->{data}});
     'UPDATE ' . $self->TABLE . " SET $SET WHERE $pk=?";
   };
-  return $self->dbh->prepare($self->{SQL_UPDATE})
+  return $dbh->prepare($self->{SQL_UPDATE})
     ->execute(values %{$self->{data}}, $self->{data}{$pk});
 
   #return $self->dbix->query($SQL, (map { $self->{data}{$_} } @columns));
@@ -380,12 +394,13 @@ sub insert {
   my ($self) = @_;
   my ($pk, $class) = ($self->PRIMARY_KEY, ref $self);
 
-  $self->dbh->prepare(
-                      $SQL_CACHE->{$class}{INSERT} || $class->SQL('INSERT')
-                    )->execute(map {
+  $self->dbh->prepare($SQL_CACHE->{$class}{INSERT} || $class->SQL('INSERT'))->execute(
+    map {
+
       #set expected defaults
       $self->data($_)
-      } @{$class->_UNQUOTED->{COLUMNS}});
+      } @{$class->_UNQUOTED->{COLUMNS}}
+  );
 
   #user set the primary key already
   return $self->{data}{$pk}
