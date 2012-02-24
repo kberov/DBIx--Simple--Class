@@ -7,6 +7,7 @@ Revision history for DBIx::Simple::Class
         - Moved POD to Checks.pod for easier spellchecking. Spellcheck.
         - Renamed _make_field_attrs() to BUILD() and added documentation,
           thus allowing developers to inject their custom logic officially :).
+        - Updated README
         
 0.57    2012-02-20 16:28:56 EET
         - Happy birthday to me! This release is my present for my self and everyone else!

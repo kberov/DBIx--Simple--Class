@@ -2,37 +2,43 @@ DBIx::Simple::Class - Advanced object construction for DBIx::Simple!
 
 INSTALLATION
 
-To install this module, run the following commands:
+You can install this module via CPAN:
+
+    cpan DBIx::Simple::Class
+
+To install manually, run the following commands:
 
 	perl Makefile.PL
 	make
 	make test
 	make install
 
+DEPENDENCIES
+
+DBIx::Simple, DBI, DBD::SQLite (for running tests only)
+
 DESCRIPTION
 
-This module is written to replace most of the abstraction stuff from the base 
-model class in the MYDLjE project on github, but can be used independently as well. 
+This module is written to replace most of the abstraction stuff from the base model
+ class in the MYDLjE project on github, but can be used independently as well.
 
-The class provides useful methods which simplify representing rows from 
-tables as Perl objects and modifying them. It is not intended to be a full 
-featured ORM. It does not support relational mapping. 
-This is left to the developers using this class.
+The class provides useful methods which simplify representing rows from tables as Perl
+ objects and modifying them. It is not intended to be a full featured ORM. It does not
+ provide relational mapping (yet...). This is left to the developers using this class.
 
-DBIx::Simple::Class is a database table/row abstraction. 
-At the same time it is not just a fancy representation of a table row 
-like DBIx::Simple::Result::RowObject. 
-Usin this module will make your code more organized, clean and reliable
-(separation of concerns + field-validation). 
-You will even get some more performance over plain DBIx::Simple.
-Last but not least, this module has no other non-CORE dependencies besides DBIx::Simple.
-See below for details.
+DBIx::Simple::Class is a database table/row abstraction. At the same time it is not just
+ a fancy representation of a table row like DBIx::Simple::Result::RowObject. Using this
+ module will make your code more organized, clean and reliable (separation of concerns +
+ input-validation). You will even get some more performance over plain DBIx::Simple
+ while keeping its' sexy features when you need them.Last but not least, this module 
+ has no other non-CORE dependencies besides DBIx::Simple. See below for details.
 
 SYNOPSIS
 
+  
   #1. In your class representing a template for a row in a database table or view
   package My::Model::AdminUser;
-  use base qw(DBIx::Simple::Class);
+  use base qw(DBIx::Simple::Class);#this is your base class or a class that extends it
 
   #sql to be used as table
   sub TABLE { 'users' }  #or: use constant TABLE =>'users';
@@ -91,7 +97,6 @@ SYNOPSIS
   my @admins = $dbix->query(
     $VERY_COMPLEX_SQL, @bind_variables
   )->objects($class);
-
 
 SUPPORT AND DOCUMENTATION
 
