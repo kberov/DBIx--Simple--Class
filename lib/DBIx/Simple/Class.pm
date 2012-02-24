@@ -29,8 +29,6 @@ sub COLUMNS {
 }
 
 #used to validate params to field-setters
-my $_CHECKS = {};
-
 sub CHECKS {
   croak(
     "You must define your CHECKS subroutine that returns your private \$_CHECKS HASHREF!"
@@ -44,6 +42,16 @@ sub PRIMARY_KEY {'id'}
 
 sub ALIASES { {} }
 
+my $QUOTE_IDENTIFIERS = {};
+
+sub QUOTE_IDENTIFIERS {
+  my $class  = shift;
+  my $yes_no = shift;
+  return $QUOTE_IDENTIFIERS->{$class} = $yes_no if defined $yes_no;
+  return $QUOTE_IDENTIFIERS->{$class};
+}
+my $UNQUOTED = {};
+sub _UNQUOTED {$UNQUOTED}
 my $SQL_CACHE = {};
 my $SQL       = {};
 $SQL = {
@@ -159,6 +167,7 @@ my $DBIX;    #DBIx::Simple instance
 sub dbix {
   return ($DBIX ||= $_[1]) || croak('DBIx::Simple is not instantiated');
 }
+sub dbh { $_[0]->dbix->dbh }
 
 #METHODS
 
@@ -189,17 +198,20 @@ sub new_from_dbix_simple {
 
 sub select {
   my ($class, $where) = _get_obj_args(@_);
+  $class->BUILD() unless $_attributes_made->{$class};
   return $class->dbix->select($class->TABLE, $class->COLUMNS,
     {%{$class->WHERE}, %$where})->object($class);
 }
 
 sub query {
   my $class = shift;
+  $class->BUILD() unless $_attributes_made->{$class};
   return $class->dbix->query(@_)->object($class);
 }
 
 sub select_by_pk {
   my $class = shift;
+  $class->BUILD() unless $_attributes_made->{$class};
   return $class->dbix->query($SQL_CACHE->{$class}{SELECT_BY_PK}
       || $class->SQL('SELECT_BY_PK'), shift)->object($class);
 }
@@ -209,7 +221,7 @@ sub select_by_pk {
 sub BUILD {
   my $class = shift;
   (!ref $class)
-    || croak("Call this method as $class->make_field_attrs()");
+    || croak("Call this method as $class->BUILD()");
   my $code = '';
   foreach (@{$class->COLUMNS}) {
     my $alias = $class->ALIASES->{$_} || $_;
@@ -223,29 +235,58 @@ sub BUILD {
 sub $class\::$alias {
   my (\$self,\$value) = \@_;
   if(defined \$value){ #setting value
-    \$self->{data}{$_} = \$self->_check($_=>\$value);
+  \$self->{data}{qq{$_}} = \$self->_check(qq{$_}=>\$value);
     #make it chainable
     return \$self;
   }
-  \$self->{data}{$_}
-    //= \$self->CHECKS->{$_}{default}; #getting value
+  \$self->{data}{qq{$_}}
+  //= \$self->CHECKS->{qq{$_}}{default}; #getting value
 }
 
 SUB
 
   }
+  $class->_UNQUOTED->{TABLE}   = $class->TABLE;
+  $class->_UNQUOTED->{WHERE}   = {%{$class->WHERE}};      #copy
+  $class->_UNQUOTED->{COLUMNS} = [@{$class->COLUMNS}];    #copy
+  if ($class->QUOTE_IDENTIFIERS) {
+    my $dbh = $class->dbh;
+    my $sep = $dbh->get_info(29);                         # SQL_IDENTIFIER_QUOTE_CHAR
+    $code
+      .= 'no warnings qw"redefine";'
+      . "sub $class\::TABLE {'"
+      . $class->dbh->quote_identifier($class->TABLE) . "'}";
+    for (keys %{$class->WHERE}) {
+      $class->WHERE->{$sep . $class->dbh->quote_identifier($_) . $sep} =
+        delete $class->WHERE->{$_};
+    }
+    for (0 .. @{$class->COLUMNS} - 1) {
+      $class->COLUMNS->[$_] =
+        $sep . $class->dbh->quote_identifier($class->COLUMNS->[$_]) . $sep;
+    }
+  }    #if ($class->QUOTE_IDENTIFIERS)
   $code .= "$/1;";
 
   #I know what I am doing. I think so...
   unless (eval $code) {    ##no critic (BuiltinFunctions::ProhibitStringyEval)
     croak($class . " compiler error: $/$code$/$@$/");
   }
-  if ($DEBUG) {
+  if ($class->DEBUG) {
     carp($class . " generated accessors: $/$code$/$@$/");
+    $class->dbh->{Callbacks} = {
+      prepare => sub {
+        my ($dbh, $query, $attrs) = @_;
+        carp("Preparing query:\n$query\n");
+        return;
+      },
+    };
+  }
+  else {
+    $class->dbh->{Callbacks} = {prepare => sub { },};
   }
 
   #make sure we die loudly
-  $class->dbix->{dbh}{RaiseError} = 1;
+  $class->dbh->{RaiseError} = 1;
   return $_attributes_made->{$class} = 1;
 }
 
@@ -318,7 +359,7 @@ sub update {
     my $SET = join(', ', map { $_ . '=? ' } keys %{$self->{data}});
     'UPDATE ' . $self->TABLE . " SET $SET WHERE $pk=?";
   };
-  return $self->dbix->{dbh}->prepare($self->{SQL_UPDATE})
+  return $self->dbh->prepare($self->{SQL_UPDATE})
     ->execute(values %{$self->{data}}, $self->{data}{$pk});
 
   #return $self->dbix->query($SQL, (map { $self->{data}{$_} } @columns));
@@ -328,18 +369,17 @@ sub insert {
   my ($self) = @_;
   my ($pk, $class) = ($self->PRIMARY_KEY, ref $self);
 
-  $self->dbix->{dbh}->prepare($SQL_CACHE->{$class}{INSERT} || $class->SQL('INSERT'))
-    ->execute(
+  $self->dbh->prepare($SQL_CACHE->{$class}{INSERT} || $class->SQL('INSERT'))->execute(
     map {
 
       #set expected defaults
       $self->data($_)
       } @{$self->COLUMNS}
-    );
+  );
 
   #user set the primary key already
   return $self->{data}{$pk}
-    ||= $self->dbix->{dbh}->last_insert_id(undef, undef, $self->TABLE, $pk);
+    ||= $self->dbh->last_insert_id(undef, undef, $self->TABLE, $pk);
 
 }
 

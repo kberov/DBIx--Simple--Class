@@ -418,6 +418,53 @@ is(scalar @$site_users, 2, 'OFFSET offsets ok');
 is_deeply($site_users, [$site_users[-2], $site_users[-1]], 'OFFSET really offsets ok');
 
 
+#QUOTE_IDENTIFIERS
+is_deeply(
+  $SCLASS->_UNQUOTED,
+  { 'WHERE' => {
+      'disabled' => 0,
+      'group_id' => 3
+    },
+    'COLUMNS' => ['id', 'group_id', 'login_name', 'login_password', 'disabled'],
+    'TABLE'   => 'users'
+  },
+  '_UNQUOTED ok'
+);
+use Data::Dumper;
+warn Dumper $SCLASS->_UNQUOTED;
+my $my_groups_table = <<"T";
+CREATE TABLE "my groups"(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  "group" VARCHAR(12)
+  )
+T
+
+$dbix->query($my_groups_table);
+
+
+{
+
+  package MyGoups;
+  use base 'DBIx::Simple::Class';
+  sub TABLE {'my groups'}                            #problem
+  sub COLUMNS { ['id', 'group', 'is\' enabled'] }    #problem
+
+  sub ALIASES {
+    { 'is\' enabled' => 'is_enabled' }
+  }
+  sub WHERE { {'is enabled' => 1} }
+  __PACKAGE__->QUOTE_IDENTIFIERS(1);                 #no problem now
+  __PACKAGE__->BUILD;
+}
+warn Dumper(
+  { TABLE   => MyGoups->TABLE,
+    COLUMNS => MyGoups->COLUMNS,
+    WHERE   => MyGoups->WHERE
+  }
+);
+
+warn MyGoups->TABLE;
+is(MyGoups->TABLE, '"my groups"', 'IDENTIFIERS quoted ok');
 done_testing();
 
 
