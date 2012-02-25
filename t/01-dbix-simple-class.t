@@ -23,7 +23,7 @@ my $DSC = 'DBIx::Simple::Class';
 
 my $dbix = DBIx::Simple->connect('dbi:SQLite:dbname=:memory:', {sqlite_unicode => 1});
 
-#$DSC->DEBUG(1);
+
 is($DSC->DEBUG,    0);
 is($DSC->DEBUG(1), 1);
 is($DSC->DEBUG(0), 0);

@@ -8,7 +8,7 @@ use Params::Check;
 use List::Util qw(first);
 use Carp;
 
-our $VERSION = '0.60';
+our $VERSION = '0.61';
 $Params::Check::WARNINGS_FATAL = 1;
 $Params::Check::CALLER_DEPTH   = $Params::Check::CALLER_DEPTH + 1;
 
@@ -238,7 +238,6 @@ sub BUILD {
   $class->_UNQUOTED->{WHERE}   = {%{$class->WHERE}};      #copy
   $class->_UNQUOTED->{COLUMNS} = [@{$class->COLUMNS}];    #copy
 
-  #warn Data::Dumper->Dump([$UNQUOTED],[qw($UNQUOTED)]);
   my $code = '';
   foreach (@{$class->_UNQUOTED->{COLUMNS}}) {
 
@@ -265,9 +264,8 @@ SUB
 
   }
 
+  my $dbh = $class->dbh;  
   if ($class->QUOTE_IDENTIFIERS) {
-    my $dbh = $class->dbh;
-    my $sep = $dbh->get_info(29);    # SQL_IDENTIFIER_QUOTE_CHAR
     $code
       .= 'no warnings qw"redefine";'
       . "sub $class\::TABLE {'"
@@ -298,21 +296,16 @@ SUB
   }
   if ($class->DEBUG) {
     carp($class . " generated accessors: $/$code$/$@$/");
-    $class->dbh->{Callbacks} = {
-      prepare => sub {
+  }
+  $dbh->{Callbacks}{prepare} = sub {
+        return unless $DEBUG;
         my ($dbh, $query, $attrs) = @_;
         my ($package, $filename, $line, $subroutine) = caller(1);
         carp("SQL from $subroutine in $filename:$line :\n$query\n");
         return;
-      },
     };
-  }
-  else {
-    $class->dbh->{Callbacks} = {prepare => sub { },};
-  }
-
   #make sure we die loudly
-  $class->dbh->{RaiseError} = 1;
+  $dbh->{RaiseError} = 1;
   return $_attributes_made->{$class} = 1;
 }
 

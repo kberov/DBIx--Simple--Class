@@ -213,7 +213,7 @@ to the current DBIx::Simple instance (with L<SQL::Abstract> support eventually :
 
 =head2 dbh
 
-Shortcut for C<$self->dbix->dbh>.
+Shortcut for C<$self-E<gt>dbix-E<gt>dbh>.
 
 =head2 DEBUG
 
@@ -303,7 +303,7 @@ See L<DBIx::Simple/Advanced_object_construction>.
 
 Class method. 
 This is your real class builder. It is called in constructors only once before L<bless>.
- It creates your accessors quotes identifiers if needed. You can inject your logic here 
+ It creates your accessors. Quotes identifiers if needed. You can inject your logic here 
  if you override this method. In your C<BUILD> do not forget to call 
 C<$class-E<gt>SUPER::BUILD>. Take a look at the source of this class to make 
 sure what exactly you need to do. You can also call this method at the end
@@ -317,12 +317,17 @@ of your class definition. It will not be called again.
 =head2 query
 
 A convenient wrapper for C<$dbix-E<gt>query($SQL,@bind)-E<gt>object($class)> 
-and constructor. Accepts exactly the same arguments as L<DBIx::Simple/query>.
+and constructor. Very convenient to use with named queries. 
+Accepts exactly the same arguments as L<DBIx::Simple/query>.
 Returns an instance of your class on success or C<undef> otherwise.
 
   my $user = My::User->query(
     'SELECT ' . join (',',My::User->COLUMNS)
     . ' FROM ' . My::User->TABLE.' WHERE id=? and disabled=?', 12345, 0);
+  #or
+  my $sql = My::User->SQL('A_COMPLEX_SELECT'). ' AND id=?'
+  my $user = My::User->query($sql,12345)
+
 
 =head2 select
 
@@ -344,6 +349,7 @@ Returns an instance of your class on success or C<undef> otherwise.
 
 =head2 select_by_pk
 
+Constructor. 
 Retrieves  a row from the L</TABLE> by L</PRIMARY_KEY>. 
 Returns an instance of your class on success or C<undef> otherwise.
 
@@ -372,17 +378,24 @@ Intelligent saver. If the object is fresh
 ( not instantiated via L</new_from_dbix_simple> and L</select>) prepares and 
 executes an C<INSERT> statement, otherwise preforms an C<UPDATE>. 
 L</TABLE> and L</COLUMNS> are used to construct the SQL. 
+Optionally accepts a HASH or HASHREF with column/values pairs.
 L</data> is stored as a row in L</TABLE>.
 Returns the value of the internally performed operation. See below.
 
   my $note = MyNote->new(title=>'My Title', description =>'This is a great story.');
   #do something more...
-  $note->save;
+  my $id = $note->save; #insert
+  #later..
+  my $ok = $note->title('Your Title')->save;#update
+  $note->save(description=>$note->description.'.. I forgot something');
+  #add new record from a web-form
+  MyNote->new->save($validated_form_data);
+  MyNote->new($validated_form_data)->save();
 
 =head2 insert
 
 Used internally in L</save>. Can be used when you are sure your object is 
-not present in the table. Returns the value of the object L</PRIMARY_KEY>
+not present in the table. Returns the value of the object's L</PRIMARY_KEY>
 on success. See L<DBIx::Simple/last_insert_id>.
 
     my $note = MyNote->new(title=>'My Title', description =>'This is a great story.');
@@ -422,10 +435,13 @@ It's easy.
   
   package My::Model::User
   use base qw(My::Model);
-  
+  sub WHERE { deleted => 0 }
+  #...
+  #a different deleting
   sub delete {
     $_[0]->deleted(1)->update;#set deleted column to 1
   }
+  1;
   
   #explicit suicide
   $user->dbix->query('DELETE FROM users WHERE id=?',$user->id);

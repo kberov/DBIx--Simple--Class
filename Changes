@@ -1,5 +1,10 @@
 Revision history for DBIx::Simple::Class
 
+0.61    2012-02-26 01:02:31 EET
+        - SQL Queries dumps stop/start immediately upon (un)setting DEBUG.
+        - Small optimizations in BUILD().
+        - Improved documentation.
+
 0.60    2012-02-25 00:31:08 EET
         - This is a major release! API seems pretty stable and complete enough.
         - Added documentation for "delete".
