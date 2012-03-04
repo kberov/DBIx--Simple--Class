@@ -8,7 +8,7 @@ use Params::Check;
 use List::Util qw(first);
 use Carp;
 
-our $VERSION = '0.61';
+our $VERSION = '0.62';
 $Params::Check::WARNINGS_FATAL = 1;
 $Params::Check::CALLER_DEPTH   = $Params::Check::CALLER_DEPTH + 1;
 
@@ -264,7 +264,7 @@ SUB
 
   }
 
-  my $dbh = $class->dbh;  
+  my $dbh = $class->dbh;
   if ($class->QUOTE_IDENTIFIERS) {
     $code
       .= 'no warnings qw"redefine";'
@@ -298,12 +298,13 @@ SUB
     carp($class . " generated accessors: $/$code$/$@$/");
   }
   $dbh->{Callbacks}{prepare} = sub {
-        return unless $DEBUG;
-        my ($dbh, $query, $attrs) = @_;
-        my ($package, $filename, $line, $subroutine) = caller(1);
-        carp("SQL from $subroutine in $filename:$line :\n$query\n");
-        return;
-    };
+    return unless $DEBUG;
+    my ($dbh, $query, $attrs) = @_;
+    my ($package, $filename, $line, $subroutine) = caller(1);
+    carp("SQL from $subroutine in $filename:$line :\n$query\n");
+    return;
+  };
+
   #make sure we die loudly
   $dbh->{RaiseError} = 1;
   return $_attributes_made->{$class} = 1;
