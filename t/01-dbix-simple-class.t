@@ -14,7 +14,9 @@ BEGIN {
     or plan skip_all => 'DBD::SQLite >= 1.00 required';
 }
 local $Params::Check::VERBOSE = 0;
-use DBIx::Simple::Class;
+
+use lib qw(t);
+use My;
 
 my $DSC = 'DBIx::Simple::Class';
 
@@ -55,48 +57,6 @@ T
 
 $dbix->query($groups_table);
 $dbix->query($users_table);
-
-{
-
-  package My::User;
-  use base qw(DBIx::Simple::Class);
-
-  sub TABLE   {'users'}
-  sub COLUMNS { [qw(id group_id login_name login_password disabled)] }
-  sub WHERE   { {disabled => 1} }
-
-  #See Params::Check
-  my $_CHECKS = {
-    id       => {allow => qr/^\d+$/x},
-    group_id => {allow => qr/^\d+$/x, default => 1},
-    disabled => {
-      default => 1,
-      allow   => sub {
-        return $_[0] =~ /^[01]$/x;
-        }
-    },
-    login_name     => {allow => qr/^\p{IsAlnum}{4,12}$/x},
-    login_password => {
-      required => 1,
-      allow    => sub { $_[0] =~ /^[\w\W]{8,20}$/x; }
-      }
-
-      #...
-  };
-  sub CHECKS {$_CHECKS}
-
-  sub id {
-    my ($self, $value) = @_;
-    if (defined $value) {    #setting value
-      $self->{data}{id} = $self->_check(id => $value);
-
-      #make it chainable
-      return $self;
-    }
-    $self->{data}{id} //= $self->CHECKS->{id}{default};    #getting value
-  }
-  1;
-}
 
 #$DSC->DEBUG(1);
 isa_ok(ref(My::User->dbix),        'DBIx::Simple');
@@ -167,22 +127,7 @@ is($user->data(disabled => 0, group_id => 2)->{group_id},
   2, 'disabled via data is valid');
 is(ref $user->data, 'HASH', 'disabled via data is valid');
 
-
-{
-
-  package My::Group;
-  use base qw(DBIx::Simple::Class);
-
-  use constant TABLE   => 'groups';
-  use constant COLUMNS => [qw(id group_name foo-bar data)];
-  use constant WHERE   => {};
-
-  #See Params::Check
-  use constant CHECKS => {};
-  1;
-}
 my $group;
-
 like(
   (eval { My::Group->new() }, $@),
   qr/You can not use .+? as a column name/,
@@ -279,23 +224,7 @@ CREATE TABLE collision(
 T
 
 $dbix->query($collision_table);
-{
 
-  package My::Collision;
-  use base qw(DBIx::Simple::Class);
-
-  use constant TABLE   => 'collision';
-  use constant COLUMNS => [qw(id data)];
-  use constant WHERE   => {};
-  use constant ALIASES => {data => 'column_data'};
-
-  #CHECKS are on columns
-  use constant CHECKS => {
-    id   => {allow   => qr/^\d+$/x},
-    data => {default => '',}           #that's ok
-  };
-  1;
-}
 my $coll;
 isa_ok($coll = My::Collision->new(data => 'some text'),
   'My::Collision', '"column=>alias" ok');
@@ -331,21 +260,9 @@ is(My::Collision->find(2)->id, 2, 'find ok from $SQL_CACHE');
 my $site_group = My::Group->new(group_name => 'SiteUsers');
 is($site_group->save, 3, ' group ' . $site_group->group_name . ' created ok');
 
-{
-
-  package My::SiteUser;
-  use base qw(My::User);
-  my $_CHECKS = My::User->CHECKS;
-  $_CHECKS->{group_id}{default} = $site_group->id;
-  sub CHECKS {$_CHECKS}
-  sub WHERE { {disabled => 0, group_id => $_CHECKS->{group_id}{default}} }
-
-  #merge with parent $SQL
-  __PACKAGE__->SQL(GUEST_USER => 'SELECT * FROM users WHERE login_name = \'guest\'');
-
-  1;
-}
 my $SCLASS = 'My::SiteUser';
+$SCLASS->CHECKS->{group_id}{default} = $site_group->id;
+$SCLASS->WHERE->{group_id} = $site_group->id;
 isa_ok($SCLASS->SQL(FOO => 'SELECT * FROM foo'), 'HASH', 'SQL(FOO=>...) is setting ok');
 is(
   $SCLASS->SQL(FOO => 'SELECT * FROM foo') && $SCLASS->SQL('FOO'),
@@ -446,39 +363,17 @@ T
 
 $dbix->query($my_groups_table);
 
+#now dbix is instantiated and we can call BUILD in the package it self
+require My::Groups;
 
-{
-
-  package MyGoups;
-  use base 'DBIx::Simple::Class';
-  sub TABLE {'my groups'}                            #problem
-  sub COLUMNS { ['id', 'group', 'is\' enabled'] }    #problem
-
-  sub ALIASES {
-    { 'is\' enabled' => 'is_enabled', }
-  }
-
-  sub WHERE { {'is enabled' => 1} }
-
-  sub CHECKS {
-    {
-      'is\' enabled' => {allow    => qr/^[01]$/},
-        id           => {allow    => qr/^\d+$/x},
-        group        => {required => 1, allow => qr/^\w+$/}
-    }
-  }
-  __PACKAGE__->QUOTE_IDENTIFIERS(1);    #no problem now
-  __PACKAGE__->BUILD;
-}
-
-is(MyGoups->TABLE, '"my groups"', 'table IDENTIFIER quoted ok');
-is(eval { MyGoups->new('is\' enabled' => 1, group => 'name1')->insert }
+is(My::Groups->TABLE, '"my groups"', 'table IDENTIFIER quoted ok');
+is(eval { My::Groups->new('is\' enabled' => 1, group => 'name1')->insert }
     || $@ => 1 => 'quoteD_identifier inserts ok');
-is(eval { MyGoups->new('is\' enabled' => 1, group => 'name2')->save } || $@,
+is(eval { My::Groups->new('is\' enabled' => 1, group => 'name2')->save } || $@,
   2, 'quoteD_identifier inserts ok2');
 
-isa_ok(eval { $g2 = MyGoups->find(2) }
-    || $@ => MyGoups => 'quoteD_identifier finds ok');
+isa_ok(eval { $g2 = My::Groups->find(2) }
+    || $@ => 'My::Groups' => 'quoteD_identifier finds ok');
 is_deeply(
   $g2->data,
   { 'group'        => 'name2',
@@ -500,7 +395,7 @@ is_deeply(
   'quoteD_identifier data after update ok'
 );
 is_deeply(
-  MyGoups->find(2)->data,
+  My::Groups->find(2)->data,
   { 'group'        => 'name_second',
     'is\' enabled' => 1,
     'id'           => 2
@@ -509,20 +404,25 @@ is_deeply(
 );
 
 #this will make it die since identifiers are already quoted and become double quoted
-delete $DSC->_attributes_made->{MyGoups};
+delete $DSC->_attributes_made->{'My::Groups'};
 like(
-  eval { MyGoups->find(2) } || $@,
+  eval { My::Groups->find(2) } || $@,
   qr/'"""my\sgroups"""'/x,
   'quoteD already identifier  ok'
 );
 
-like(eval { MyGoups->query(MyGoups->SQL('SELECT') . ' and id=?', 2) } || $@,
+like(eval { My::Groups->query(My::Groups->SQL('SELECT') . ' and id=?', 2) } || $@,
   qr/'"""my\sgroups"""'/x, 'quoteD already identifier  ok2');
-if (eval { MyGoups->dbix->abstract }) {
-  like(eval { MyGoups->select(id => 2) } || $@,
+if (eval { My::Groups->dbix->abstract }) {
+  like(eval { My::Groups->select(id => 2) } || $@,
     qr/'"""my\sgroups"""'/x, 'quoteD already identifier  ok3');
 
 }
+
+#our own object method
+
+
+#our own objects method
 
 #warn Dumper($g2->data);
 

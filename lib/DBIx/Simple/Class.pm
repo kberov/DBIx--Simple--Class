@@ -402,6 +402,9 @@ sub insert {
 
 }
 
+sub namespace {__PACKAGE__}
+
+
 1;
 
 __END__

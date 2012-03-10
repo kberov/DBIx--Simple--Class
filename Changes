@@ -1,7 +1,8 @@
 Revision history for DBIx::Simple::Class
 
-0.62    2012-03-04 12:33:29 EET
+0.62    2012-03-10 02:57:59 EET
         - Switched to Artistic License version 2.0.
+        - Refactored tests. Moved out test-shema classes (My).
 
 0.61    2012-02-26 01:02:31 EET
         - SQL Queries dumps stop/start immediately upon (un)setting DEBUG.
