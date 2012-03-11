@@ -95,6 +95,7 @@ DBIx::Simple::Class is a database table/row abstraction. At the same time it is 
 
 =head1 CONSTANTS
 
+
 =head2 TABLE
 
 You B<must> define it in your subclass. This is the table where 
@@ -129,7 +130,6 @@ This constant is optional.
 
 
 =head2 COLUMNS
-
 
 You B<must> define it in your subclass. 
 It must return an ARRAYREF with table columns to which the data is written.
@@ -316,33 +316,42 @@ of your class definition. It will not be called again.
 
 =head2 query
 
-A convenient wrapper for C<$dbix-E<gt>query($SQL,@bind)-E<gt>object($class)> 
-and constructor. Very convenient to use with named queries. 
+Context aware constructor. Very convenient to use with named queries. 
 Accepts exactly the same arguments as L<DBIx::Simple/query>.
-Returns an instance of your class on success or C<undef> otherwise.
+Depending on context fetches and returns an instance or I<fetches and returns a list> 
+of instances of your class on success.
+Returns C<undef> otherwise.
 
   my $user = My::User->query(
     'SELECT ' . join (',',My::User->COLUMNS)
     . ' FROM ' . My::User->TABLE.' WHERE id=? and disabled=?', 12345, 0);
+  
   #or
   my $sql = My::User->SQL('A_COMPLEX_SELECT'). ' AND id=?'
   my $user = My::User->query($sql,12345)
+  
+  #or...
+  my $sql = 'SELECT * FROM users WHERE country_id=?';
+  #same as $dbix->query($sql,'fr')->objects('My::User');
+  my @french_users = My::User->query($sql,'fr');
+
+  #same as $dbix->query($sql,'fr')->object('My::User');
+  my $french_user = My::User->query($sql,'fr');
 
 
 =head2 select
 
-A convenient wrapper for 
-C<$dbix-E<gt>select($table,$columns,$where)-E<gt>object($class)> and constructor. 
+Context aware constructor. Does the same as
+C<$dbix-E<gt>select($table,$columns,$where)-E<gt>object($class)>. 
 Note that L<SQL::Abstract> B<must be installed>. This is the only method 
 that requires it. Have in mind that our L</query> is faster than this 
 and you can use named queries via L</SQL>.
 
-Instantiates an object from a saved in the database row by constructing and 
-executing an SQL query based on the parameters. 
+Instantiates an object or list of objects depending on context. 
+Executes an SQL query based on the parameters. 
 These parameters are used to construct the C<WHERE> clause for the SQL C<SELECT> 
-statement. Prepends the L</WHERE> clause defined by you to the parameters. 
+statement. Prepends the class L</WHERE> clause defined by you to the parameters. 
 If a row is found, puts it in L</data>. 
-Returns an instance of your class on success or C<undef> otherwise.
 
     # Build your WHERE using an SQL::Abstract structure:
     my $user = MYDLjE::M::User->select(id => $user_id);

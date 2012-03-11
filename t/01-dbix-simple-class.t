@@ -309,8 +309,7 @@ like(
 
 for (3 .. 5) {
   my $user = $SCLASS->new(login_name => "user$_", login_password => time . $_ . 'a');
-  $user->save();
-  is($user->id, $_, 'User with id:' . $user->id . ' saved ok');
+  is($user->save, $_, 'User with id:' . $user->id . ' saved ok');
   is($user->group_id, $site_group->id, 'User has group_id:' . $site_group->id . ' ok');
 }
 
@@ -321,7 +320,14 @@ my $site_users =
 my @site_users =
   $dbix->query('SELECT * FROM users WHERE group_id=?', $site_group->id)
   ->objects($SCLASS);
-is_deeply($site_users, \@site_users, 'new_from_dbix_simple wantarray ok');
+is_deeply($site_users, \@site_users, 'new_from_dbix_simple() wantarray ok');
+
+#test query context awareness
+my $site_user = $SCLASS->query('SELECT * FROM users WHERE group_id=?', $site_group->id);
+@site_users = $SCLASS->query('SELECT * FROM users WHERE group_id=?', $site_group->id);
+
+is_deeply($site_user, $site_users[0], 'query() wantarray ok');
+
 
 #LIMIT
 like(
@@ -418,13 +424,6 @@ if (eval { My::Groups->dbix->abstract }) {
     qr/'"""my\sgroups"""'/x, 'quoteD already identifier  ok3');
 
 }
-
-#our own object method
-
-
-#our own objects method
-
-#warn Dumper($g2->data);
 
 done_testing();
 
