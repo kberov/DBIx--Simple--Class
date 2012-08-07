@@ -152,7 +152,7 @@ sub SQL {
   if ($args && !ref $args) {
 
     #do not return hidden keys
-    croak("Named query '$args' is not ment for direct usage") if $args =~ /^_+/x;
+    croak("Named query '$args' can not be used directly") if $args =~ /^_+/x;
 
     #allow subclasses to override parent sqls and cache produced SQL
     my $_SQL =
