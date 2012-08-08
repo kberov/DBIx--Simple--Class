@@ -204,12 +204,19 @@ This is a class attribute, shared among all subclasses of DBIx::Simple::Class.
 This is an L<DBIx::Simple> instance and (as you guessed) provides direct access
 to the current DBIx::Simple instance (with L<SQL::Abstract> support eventually :)).
 
-  DBIx::Simple::Class->dbix( DBIx::Simple->connect(...) );
+Copy/paste/override this method in your base schema classes
+if you want more instances per application.
+
+  My->dbix( DBIx::Simple->connect($bar_dsn) );
+  Your->dbix( DBIx::Simple->connect($foo_dsn) );
+  
   #later in My::Note
-  $self->dbix->query(...);#same instance
+  $self->dbix->query(...); #$bar_dsn instance
   #or
-  __PACKAGE__->dbix->query(...);#same instance
-  dbix->query(...);#same instance
+  __PACKAGE__->dbix->query(...); #$bar_dsn instance
+  
+  #in Your::Note...
+  $self->dbix->query(...); #$foo_dsn instance
 
 =head2 dbh
 

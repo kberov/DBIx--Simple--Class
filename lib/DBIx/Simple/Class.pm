@@ -3,10 +3,10 @@ package DBIx::Simple::Class;
 use 5.010;
 use strict;
 use warnings;
-use DBIx::Simple;
 use Params::Check;
 use List::Util qw(first);
 use Carp;
+use DBIx::Simple;
 
 our $VERSION = '0.62';
 $Params::Check::WARNINGS_FATAL = 1;
@@ -71,9 +71,9 @@ $SQL = {
     my $class = shift;
     return $SQL_CACHE->{$class}{SELECT} ||= do {
       my $where = $class->WHERE;
-      'SELECT ' 
-        . join(',', @{$class->COLUMNS}) 
-        . ' FROM ' 
+      'SELECT '
+        . join(',', @{$class->COLUMNS})
+        . ' FROM '
         . $class->TABLE
         . (
         (keys %$where)
@@ -173,11 +173,15 @@ sub SQL {
 }
 
 
-my $DBIX;    #DBIx::Simple instance
-
 #ATTRIBUTES
+
+#copy/paste/override this method in your base schema classes
+#if you want more instances per application
 sub dbix {
-  return ($DBIX ||= $_[1]) || croak('DBIx::Simple is not instantiated');
+
+  # Singleton DBIx::Simple instance
+  state $DBIx;
+  return ($DBIx = $_[1] ? $_[1] : $DBIx) || croak('DBIx::Simple is not instantiated');
 }
 sub dbh { $_[0]->dbix->dbh }
 
@@ -394,7 +398,7 @@ sub insert {
 
       #set expected defaults
       $self->data($_)
-      } @{$class->_UNQUOTED->{COLUMNS}}
+    } @{$class->_UNQUOTED->{COLUMNS}}
   );
 
   #user set the primary key already

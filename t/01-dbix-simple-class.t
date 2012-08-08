@@ -59,6 +59,8 @@ $dbix->query($groups_table);
 $dbix->query($users_table);
 
 #$DSC->DEBUG(1);
+isa_ok(ref(My->dbix($dbix)), 'DBIx::Simple');
+is(My->dbix, $DSC->dbix, 'same instance');
 isa_ok(ref(My::User->dbix),        'DBIx::Simple');
 isa_ok(ref(My::User->dbix($dbix)), 'DBIx::Simple');
 is(My::User->TABLE, 'users');
