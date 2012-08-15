@@ -59,10 +59,9 @@ $dbix->query($groups_table);
 $dbix->query($users_table);
 
 #$DSC->DEBUG(1);
-isa_ok(ref(My->dbix($dbix)), 'DBIx::Simple');
-is(My->dbix, $DSC->dbix, 'same instance');
+isa_ok(ref(My->dbix($dbix)),        'DBIx::Simple');
+is(My->dbix,$DSC->dbix,'same instance');
 isa_ok(ref(My::User->dbix),        'DBIx::Simple');
-isa_ok(ref(My::User->dbix($dbix)), 'DBIx::Simple');
 is(My::User->TABLE, 'users');
 is_deeply(My::User->COLUMNS, [qw(id group_id login_name login_password disabled)]);
 is(ref(My::User->WHERE), 'HASH');
@@ -334,7 +333,7 @@ is_deeply($site_user, $site_users[0], 'query() wantarray ok');
 #LIMIT
 like(
   (eval { $DSC->SQL('_LIMIT') } || $@),
-  qr/Named query '_LIMIT' can not be used directly/,
+  qr/Named query '_LIMIT' is not ment/,
   '$DSC->SQL(_LIMIT) croaks ok'
 );
 $site_users = $dbix->query(
