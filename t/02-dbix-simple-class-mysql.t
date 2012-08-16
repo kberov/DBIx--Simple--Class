@@ -15,6 +15,10 @@ BEGIN {
     . DBD::mysql->VERSION;
 }
 local $Params::Check::VERBOSE = 0;
+#Suppress some warnings from DBIx::Simple::Class during tests.
+local $SIG{__WARN__} = sub{
+  warn $_[0] if $_[0] !~ /(generated accessors|is not such field)/;
+};
 
 use lib qw(t);
 use My;
@@ -158,7 +162,7 @@ My::Group->DEBUG(1);
 like(
   (eval { My::Group->new->data('lala') }, $@),
   qr/Can't locate object method "lala" via package "My::Group"/,
-  '"is not a valid key for" ok'
+  '"is not a valid key for" ok2'
 );
 ok(My::Group->can('id'),         'can id');
 ok(My::Group->can('group_name'), 'can group_name');

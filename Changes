@@ -1,6 +1,7 @@
 Revision history for DBIx::Simple::Class
 
-0.64    2012-08-16 03:52 EEST
+0.64    2012-08-17 02:02 EEST
+        - Suppressed some warnings from DBIx::Simple::Class during tests.
         - Added mysql tests.
         - Fixed sqlite tests.
 

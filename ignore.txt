@@ -1,4 +1,5 @@
 blib*
+*.komodoproject
 Makefile
 Makefile.old
 Build
