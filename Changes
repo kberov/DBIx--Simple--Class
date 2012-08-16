@@ -1,5 +1,9 @@
 Revision history for DBIx::Simple::Class
 
+0.64    2012-08-16 03:52 EEST
+        - Added mysql tests.
+        - Fixed sqlite tests.
+
 0.63    2012-08-08 03:01 EEST
         - Using "state" instead of "my" for DBIx::Simple singleton.
         - Improved documentation.
