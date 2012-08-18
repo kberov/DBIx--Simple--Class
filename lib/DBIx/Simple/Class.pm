@@ -7,25 +7,27 @@ use Params::Check;
 use Carp;
 use DBIx::Simple;
 
-our $VERSION = '0.66';
+our $VERSION = '0.67';
 
 
 #CONSTANTS
 
+#defauld debug mode
 my $DEBUG = 0;
 sub DEBUG { defined $_[1] ? ($DEBUG = $_[1]) : $DEBUG }
 
-#tablename
+#abstract tablename
 sub TABLE {
   croak("You must define a table-name for your class: sub TABLE {'tablename'}!");
 }
 
-#table columns
+#abstract table columns
 sub COLUMNS {
   croak("You must define fields for your class: sub COLUMNS {['id','name','etc']}!");
 }
 
-#used to validate params to field-setters
+#Used to validate params to field-setters
+#Passed to Params::Check::check()
 sub CHECKS {
   croak(
     "You must define your CHECKS subroutine that returns your private \$_CHECKS HASHREF!"
@@ -35,30 +37,33 @@ sub CHECKS {
 #default where
 sub WHERE { {} }
 
+#default primary key
 sub PRIMARY_KEY {'id'}
 
+#no default aliases
 sub ALIASES { {} }
 
-my $QUOTE_IDENTIFIERS = {};
-
+#should we quote identifiers for a class or not?
 sub QUOTE_IDENTIFIERS {
-  my $class  = shift;
-  my $yes_no = shift;
-  return $QUOTE_IDENTIFIERS->{$class} = $yes_no if defined $yes_no;
-  return $QUOTE_IDENTIFIERS->{$class};
+  my $class = shift;
+  state $QUOTE_IDENTIFIERS = {};
+  return $QUOTE_IDENTIFIERS->{$class} //= shift || '';
 }
 
-my $UNQUOTED = {};
-
+#Used to store unquoted identifirers as they were before quoting
+#See BUILD()
 sub _UNQUOTED {
   my ($class) = shift;    #class
   $class = ref $class if ref $class;
-  return $UNQUOTED->{$class} ||= {};
+  state $UNQUOTED = {};
+  return $UNQUOTED->{$class} //= {};
 }
 
 #for outside modification during tests
 my $_attributes_made = {};
 sub _attributes_made {$_attributes_made}
+
+#stored generated SQL strings
 my $SQL_CACHE = {};
 sub _SQL_CACHE {$SQL_CACHE}
 
@@ -132,6 +137,7 @@ $SQL = {
   },
 };
 
+# generate(d) limit clause
 sub SQL_LIMIT {
   my $_LIMIT = $SQL->{_LIMIT};
   return $_LIMIT->(@_);
@@ -305,7 +311,7 @@ SUB
     carp($class . " generated accessors: $/$code$/$@$/");
   }
   $dbh->{Callbacks}{prepare} = sub {
-    return unless $DEBUG;
+    $DEBUG || return;
     my ($dbh, $query, $attrs) = @_;
     my ($package, $filename, $line, $subroutine) = caller(1);
     carp("SQL from $subroutine in $filename:$line :\n$query\n");

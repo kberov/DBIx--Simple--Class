@@ -3,7 +3,6 @@ use strict;
 use warnings;
 use utf8;
 
-use DBIx::Simple::Class;
 {
 
   package My;    #our schema
@@ -15,7 +14,6 @@ use DBIx::Simple::Class;
 
   package My::User;
   use base qw(My);
-
   sub TABLE   {'users'}
   sub COLUMNS { [qw(id group_id login_name login_password disabled)] }
   sub WHERE   { {disabled => 1} }

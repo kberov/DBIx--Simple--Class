@@ -44,13 +44,13 @@ like((eval { $DSC->CHECKS },  $@), qr/define your CHECKS subroutine/);
 is(ref($DSC->WHERE), 'HASH');
 
 my $groups_table = <<"T";
-CREATE TABLE groups(
+CREATE TEMPORARY TABLE groups(
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   group_name VARCHAR(12)
   )
 T
 my $users_table = <<"T";
-CREATE TABLE users(
+CREATE TEMPORARY TABLE users(
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   group_id INT default 1,
   login_name VARCHAR(12),
@@ -222,7 +222,7 @@ is_deeply(
 
 #test column=>method collision
 my $collision_table = <<"T";
-CREATE TABLE collision(
+CREATE TEMPORARY TABLE collision(
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   data TEXT
   )
@@ -365,7 +365,7 @@ is_deeply(
 );
 
 my $my_groups_table = <<"T";
-CREATE TABLE "my groups"(
+CREATE TEMPORARY TABLE "my groups"(
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   "group" VARCHAR(12),
   "is' enabled" INT DEFAULT 0

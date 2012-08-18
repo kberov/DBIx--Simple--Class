@@ -9,7 +9,7 @@ use Test::More;
 
 BEGIN {
   eval { require DBD::mysql; 1 }
-    or plan skip_all => 'DBD::mysql required';
+    or plan skip_all => 'DBD::mysql is required for this test.';
   eval { DBD::mysql->VERSION >= 4.005 }
     or plan skip_all => 'DBD::mysql >= 4.005 required. You have only'
     . DBD::mysql->VERSION;
@@ -32,7 +32,7 @@ my $dbix;
 eval {
   $dbix = DBIx::Simple->connect('dbi:mysql:database=test;host=localhost',
     $ENV{USER}, '', {mysql_enable_utf8 => 1});
-} or plan skip_all => $@;
+} or plan skip_all => ($@ =~/Can't connect to local/?'Please start MySQL on localhost to enable this test.':$@);
 
 
 is($DSC->DEBUG,    0);
@@ -49,19 +49,19 @@ like((eval { $DSC->CHECKS },  $@), qr/define your CHECKS subroutine/);
 is(ref($DSC->WHERE), 'HASH');
 
 my $groups_table = <<"T";
-CREATE TABLE groups(
+CREATE TEMPORARY TABLE groups(
   id INTEGER PRIMARY KEY AUTO_INCREMENT,
   group_name VARCHAR(12)
-  ) ENGINE=InnoDB  DEFAULT CHARSET=utf8 COLLATE=utf8_bin
+  ) DEFAULT CHARSET=utf8 COLLATE=utf8_bin
 T
 my $users_table = <<"T";
-CREATE TABLE users(
+CREATE TEMPORARY TABLE users(
   id INTEGER PRIMARY KEY AUTO_INCREMENT,
   group_id INT default 1,
   login_name VARCHAR(12),
   login_password VARCHAR(100), 
   disabled INT DEFAULT 1
-  ) ENGINE=InnoDB  DEFAULT CHARSET=utf8 COLLATE=utf8_bin
+  ) DEFAULT CHARSET=utf8 COLLATE=utf8_bin
 T
 
 $dbix->query($groups_table);
@@ -231,10 +231,10 @@ is_deeply(
 
 #test column=>method collision
 my $collision_table = <<"TC";
-CREATE TABLE collision(
+CREATE TEMPORARY TABLE collision(
   id INTEGER PRIMARY KEY AUTO_INCREMENT,
   data TEXT
-  ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_bin
+  ) DEFAULT CHARSET=utf8 COLLATE=utf8_bin
 TC
 
 $dbix->query($collision_table);

@@ -1,5 +1,13 @@
 Revision history for DBIx::Simple::Class
 
+0.67    2012-08-18 14:38:56 EEST
+        - Added/improved comments to all default constants/class properties.
+        - $UNQUOTED and $QUOTE_IDENTIFIERS are state variables now too.
+        - Using //= for $UNQUOTED.
+        - Slight optimisations.
+        - Using Temporary tables for tests so no garbage is left
+        in mysq test database if some test dies.
+
 0.66    2012-08-18 05:57:54 EEST
         - Localised Params::Check variables as recommended in docs.
         - use 5.10.1 to use the smart match operator.
