@@ -1,10 +1,10 @@
 #!perl
 
-use 5.010;
+use 5.10.1;
 use strict;
 use warnings;
 use utf8;
-use Test::More tests => 111;
+use Test::More;
 
 
 BEGIN {

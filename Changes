@@ -1,5 +1,16 @@
 Revision history for DBIx::Simple::Class
 
+0.66    2012-08-18 05:57:54 EEST
+        - Localised Params::Check variables as recommended in docs.
+        - use 5.10.1 to use the smart match operator.
+        - No List::Util needed any more.
+        - Removed -T flag from all test files.
+
+
+0.65    2012-08-18 03:50:55 EEST
+        - Fixed mysql tests:
+        You tried to plan twice at t/02-dbix-simple-class-mysql.t line 11.
+
 0.64    2012-08-17 02:02 EEST
         - Suppressed some warnings from DBIx::Simple::Class during tests.
         - Added mysql tests.

@@ -1,16 +1,13 @@
 package DBIx::Simple::Class;
 
-use 5.010;
+use 5.10.1;
 use strict;
 use warnings;
 use Params::Check;
-use List::Util qw(first);
 use Carp;
 use DBIx::Simple;
 
-our $VERSION = '0.64';
-$Params::Check::WARNINGS_FATAL = 1;
-$Params::Check::CALLER_DEPTH   = $Params::Check::CALLER_DEPTH + 1;
+our $VERSION = '0.66';
 
 
 #CONSTANTS
@@ -189,6 +186,9 @@ sub dbh { $_[0]->dbix->dbh }
 
 sub new {
   my ($class, $fields) = _get_obj_args(@_);
+  local $Params::Check::WARNINGS_FATAL = 1;
+  local $Params::Check::CALLER_DEPTH   = $Params::Check::CALLER_DEPTH + 1;
+
   $fields = Params::Check::check($class->CHECKS, $fields)
     || croak(Params::Check::last_error());
   $class->BUILD()
@@ -326,6 +326,9 @@ sub _get_obj_args { return (shift, _get_args(@_)); }
 
 sub _check {
   my ($self, $key, $value) = @_;
+  local $Params::Check::WARNINGS_FATAL = 1;
+  local $Params::Check::CALLER_DEPTH   = $Params::Check::CALLER_DEPTH + 1;
+
   my $args_out =
     Params::Check::check({$key => $self->CHECKS->{$key} || {}}, {$key => $value});
   return $args_out->{$key};
@@ -337,7 +340,7 @@ sub data {
   if (ref $args && keys %$args) {
     for my $field (keys %$args) {
       my $alias = $self->ALIASES->{$field} || $field;
-      unless (first { $field eq $_ } @{$self->_UNQUOTED->{COLUMNS}}) {
+      unless ($field ~~ @{$self->_UNQUOTED->{COLUMNS}}) {
         Carp::cluck(
           "There is not such field $field in table " . $self->TABLE . '! Skipping...')
           if $DEBUG;
