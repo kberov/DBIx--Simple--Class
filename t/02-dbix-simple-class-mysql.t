@@ -6,22 +6,23 @@ use warnings;
 use utf8;
 use Test::More;
 
-
 BEGIN {
   eval { require DBD::mysql; 1 }
     or plan skip_all => 'DBD::mysql is required for this test.';
   eval { DBD::mysql->VERSION >= 4.005 }
     or plan skip_all => 'DBD::mysql >= 4.005 required. You have only'
     . DBD::mysql->VERSION;
+use File::Basename 'dirname';
+use Cwd;
+use lib (Cwd::abs_path(dirname(__FILE__).'/..').'/examples/lib');
 }
+use My;
 local $Params::Check::VERBOSE = 0;
 #Suppress some warnings from DBIx::Simple::Class during tests.
 local $SIG{__WARN__} = sub{
   warn $_[0] if $_[0] !~ /(generated accessors|is not such field)/;
 };
 
-use lib qw(t);
-use My;
 
 my $DSC = 'DBIx::Simple::Class';
 

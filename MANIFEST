@@ -1,4 +1,7 @@
 Changes
+examples/lib/My.pm
+examples/lib/My/Groups.pm
+examples/users.cgi
 ignore.txt
 lib/DBIx/Simple/Class.pm
 lib/DBIx/Simple/Class.pod

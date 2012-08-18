@@ -11,7 +11,10 @@ WriteMakefile(
   MIN_PERL_VERSION=> '5.10.1',
   LICENSE        => 'artistic_2',
   PL_FILES       => {},
-  BUILD_REQUIRES => {'DBD::SQLite' => '1.29'},
+  BUILD_REQUIRES => {'DBD::SQLite' => '1.29',
+  'File::Basename' =>0,
+  'Cwd' =>0,
+  },
   PREREQ_PM      => {
     'Test::More'   => 0,
     'DBIx::Simple' => 1.33,
