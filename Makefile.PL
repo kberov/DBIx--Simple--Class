@@ -8,6 +8,7 @@ WriteMakefile(
   AUTHOR         => q{Красимир Беров <berov@cpan.org>},
   VERSION_FROM   => 'lib/DBIx/Simple/Class.pm',
   ABSTRACT_FROM  => 'lib/DBIx/Simple/Class.pod',
+  MIN_PERL_VERSION=> '5.10.1',
   LICENSE        => 'artistic_2',
   PL_FILES       => {},
   BUILD_REQUIRES => {'DBD::SQLite' => '1.29'},
