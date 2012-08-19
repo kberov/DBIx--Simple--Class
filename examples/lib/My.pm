@@ -1,67 +1,14 @@
-use 5.010;
+package My;    #our schema
+use base qw(DBIx::Simple::Class);
+use 5.10.1;
 use strict;
 use warnings;
 use utf8;
+sub namespace {__PACKAGE__}
+#put common to all subclasses functionality here
 
-{
-
-  package My;    #our schema
-  use base qw(DBIx::Simple::Class);
-  sub namespace {__PACKAGE__}
-}
-
-{
-
-  package My::User;
-  use base qw(My);
-  sub TABLE   {'users'}
-  sub COLUMNS { [qw(id group_id login_name login_password disabled)] }
-  sub WHERE   { {disabled => 1} }
-
-  #See Params::Check
-  my $_CHECKS = {
-    id       => {allow => qr/^\d+$/x},
-    group_id => {allow => qr/^\d+$/x, default => 1},
-    disabled => {
-      default => 1,
-      allow   => sub {
-        return $_[0] =~ /^[01]$/x;
-        }
-    },
-    login_name     => {allow => qr/^\p{IsAlnum}{4,12}$/x},
-    login_password => {
-      required => 1,
-      allow    => sub { $_[0] =~ /^[\w\W]{8,20}$/x; }
-      }
-
-      #...
-  };
-  sub CHECKS {$_CHECKS}
-
-  sub id {
-    my ($self, $value) = @_;
-    if (defined $value) {    #setting value
-      $self->{data}{id} = $self->_check(id => $value);
-
-      #make it chainable
-      return $self;
-    }
-    $self->{data}{id} //= $self->CHECKS->{id}{default};    #getting value
-  }
-}
-{
-
-  package My::Group;
-  use base qw(My);
-
-  use constant TABLE   => 'groups';
-  use constant COLUMNS => [qw(id group_name foo-bar data)];
-  use constant WHERE   => {};
-
-  #See Params::Check
-  use constant CHECKS => {};
-}
-
+use My::Group;
+use My::User;
 {
 
   package My::Collision;
