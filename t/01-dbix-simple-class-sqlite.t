@@ -12,16 +12,23 @@ BEGIN {
     or plan skip_all => 'DBD::SQLite required';
   eval { DBD::SQLite->VERSION >= 1 }
     or plan skip_all => 'DBD::SQLite >= 1.00 required';
-use File::Basename 'dirname';
-use Cwd;
-use lib (Cwd::abs_path(dirname(__FILE__).'/..').'/examples/lib');
+  use File::Basename 'dirname';
+  use Cwd;
+  use lib (Cwd::abs_path(dirname(__FILE__) . '/..') . '/examples/lib');
 }
 use My;
 
 local $Params::Check::VERBOSE = 0;
+
 #Suppress some warnings from DBIx::Simple::Class during tests.
-local $SIG{__WARN__} = sub{
-  warn $_[0] if $_[0] !~ /(generated accessors|is not such field)/;
+local $SIG{__WARN__} = sub {
+  if ($_[0] =~ /(generated accessors|is not such field|to build)/) {
+    my ($package, $filename, $line, $subroutine) = caller(2);
+    ok(1, $subroutine . ' warns OK');
+  }
+  else {
+    warn $_[0];
+  }
 };
 
 
@@ -32,19 +39,11 @@ my $DSC = 'DBIx::Simple::Class';
 
 my $dbix = DBIx::Simple->connect('dbi:SQLite:dbname=:memory:', {sqlite_unicode => 1});
 
-
-is($DSC->DEBUG,    0);
-is($DSC->DEBUG(1), 1);
-is($DSC->DEBUG(0), 0);
+#test DBIx::Simple instantiation
 like((eval { $DSC->dbix }, $@), qr/not instantiated/);
 like((eval { $DSC->dbix('') }, $@), qr/not instantiated/);
 isa_ok(ref($DSC->dbix($dbix)), 'DBIx::Simple');
 isa_ok(ref($DSC->dbix),        'DBIx::Simple');
-
-like((eval { $DSC->TABLE },   $@), qr/table-name for your class/);
-like((eval { $DSC->COLUMNS }, $@), qr/fields for your class/);
-like((eval { $DSC->CHECKS },  $@), qr/define your CHECKS subroutine/);
-is(ref($DSC->WHERE), 'HASH');
 
 my $groups_table = <<"T";
 CREATE TEMPORARY TABLE groups(
@@ -66,13 +65,11 @@ $dbix->query($groups_table);
 $dbix->query($users_table);
 
 #$DSC->DEBUG(1);
-isa_ok(ref(My->dbix($dbix)),        'DBIx::Simple');
-is(My->dbix,$DSC->dbix,'same instance');
-isa_ok(ref(My::User->dbix),        'DBIx::Simple');
-is(My::User->TABLE, 'users');
-is_deeply(My::User->COLUMNS, [qw(id group_id login_name login_password disabled)]);
-is(ref(My::User->WHERE), 'HASH');
-is_deeply(My::User->WHERE, {disabled => 1});
+isa_ok(ref(My->dbix($dbix)), 'DBIx::Simple');
+is(My->dbix, $DSC->dbix, 'same instance');
+ok(!My->BUILD(), 'nothing to build');
+ok(!(My->DEBUG(1) && My->BUILD()), 'nothing to build debugged');
+My->DEBUG(0);
 my $user;
 my $password = time;
 like(
@@ -90,7 +87,7 @@ is(
   $DSC->_attributes_made->{'My::User'},
   'if (eval $code) in BUILD() ok'
 );
-isa_ok(ref($user), $DSC);
+isa_ok($user, $DSC);
 
 #defaults
 is($user->id, undef, 'id is undefined ok');
@@ -222,6 +219,8 @@ is_deeply(
   undef,
   'wrong select works!'
 );
+isa_ok(My->query('select * from users where id=? and disabled=?', $user->id, 1),
+  'HASH', 'My->query isa HASH');
 
 #test column=>method collision
 my $collision_table = <<"T";
@@ -291,7 +290,6 @@ like(
   qr/fields for your class/,
   '$DSC->SQL(SELECT) croaks ok'
 );
-
 $SCLASS->new(login_name => 'guest', login_password => time . 'QW')
   ->group_id($site_group->id)->save;
 

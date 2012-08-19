@@ -25,15 +25,15 @@ DBIx::Simple::Class is a database table/row abstraction. At the same time it is 
   
   #1. In your class representing a description of a row in a database table or view
   package My::Model::AdminUser;
-  #this is your base class. You can put your own common class that extends it here
-  use base qw(DBIx::Simple::Class);
+  #You can extend your own common base class that extends DBIx::Simple::Class
+  use base qw(My::Model);#My::Model is your base class.
 
-  #sql to be used as table
+  #table name used in generated SQL
   sub TABLE { 'users' }  #or: use constant TABLE =>'users';
   
   sub COLUMNS {[qw(id group_id login_name login_password first_name last_name)]}
 
-  #used to validate params to auto-generated or your own field-setters
+  #used to validate params to auto-generated field-setters/getters 
   sub CHECKS{{
     id => { allow => qr/^\d+$/x },
     group_id => { allow => qr/^1$/x, default=>1 },#admin group_id
@@ -204,8 +204,8 @@ This is a class attribute, shared among all subclasses of DBIx::Simple::Class.
 This is an L<DBIx::Simple> instance and (as you guessed) provides direct access
 to the current DBIx::Simple instance (with L<SQL::Abstract> support eventually :)).
 
-Copy/paste/override this method in your base schema classes
-if you want more instances per application.
+Copy/paste/override this method in your base classes
+if you need more instances/connections per application.
 
   My->dbix( DBIx::Simple->connect($bar_dsn) );
   Your->dbix( DBIx::Simple->connect($foo_dsn) );
@@ -249,6 +249,17 @@ be quoted upon first instantiation of your subclass. When you call
   
   #just works
   MyGoups->find(2)->group('name_second')->update;
+
+=head2 is_base_class
+
+Class attribute.
+Returns true if the class on which is called is a direct child of
+DBIx::Simple::Class.
+
+Using this method we decide to L</BUILD> or not build a class before
+instanciating it. We also use it to call L<DBIx::Simple/query>
+instead of L<DBIx::Simple::Class/query> when appropriate.
+See L<DBIx::Simple::Class/query>.
 
 =head1 METHODS
 
@@ -344,6 +355,20 @@ Returns C<undef> otherwise.
 
   #same as $dbix->query($sql,'fr')->object('My::User');
   my $french_user = My::User->query($sql,'fr');
+
+If used by your base class this method does not create a new instance.
+In this case it is the same as calling L<DBIx::Simple/query>.
+See examples in the distribution directory.
+
+  use My;#your base class
+  My->query(qq|
+      CREATE TABLE IF NOT EXISTS groups(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        group_name VARCHAR(12),
+        "foo-bar" VARCHAR(13),
+        data TEXT
+        )
+  |);
 
 
 =head2 select
@@ -471,13 +496,13 @@ A getter/setter for custom SQL code (named queries).
 Class method. 
 You can add key/value pairs in your class and then use them in your application.
 The values can be simple strings or subroutine references.
-There are already some pre-made entries in this base class that you can 
+There are already some pre-made entries in DBIx::Simple::Class that you can 
 use as example implementations. Look at the source for details.
 The subroutine references are executed/evaluated only once and their output is 
 cached for performance.
 
   package My::SiteUser;
-  use base qw(My::User);#a subclass of DBIx::Simple::Class
+  use base qw(My::User);#a subclass of DBIx::Simple::Class or My
   sub WHERE { {disabled => 0, group_id => 2} }
   
   #these could be very complex and retrieved from a file where you keep them!

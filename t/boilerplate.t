@@ -39,13 +39,13 @@ sub module_boilerplate_ok {
 }
 
 
-  not_in_file_ok(
-    README => "The README is used..." => qr/The README is used/,
-    "'version information here'" => qr/to provide version information/,
-  );
+not_in_file_ok(
+  README => "The README is used..." => qr/The README is used/,
+  "'version information here'" => qr/to provide version information/,
+);
 
-  not_in_file_ok(Changes => "placeholder date/time" => qr(Date/time));
+not_in_file_ok(Changes => "placeholder date/time" => qr(Date/time));
 
-  module_boilerplate_ok('lib/DBIx/Simple/Class.pm');
+module_boilerplate_ok('lib/DBIx/Simple/Class.pm');
 
 

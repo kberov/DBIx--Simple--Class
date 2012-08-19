@@ -12,14 +12,15 @@ BEGIN {
   eval { DBD::mysql->VERSION >= 4.005 }
     or plan skip_all => 'DBD::mysql >= 4.005 required. You have only'
     . DBD::mysql->VERSION;
-use File::Basename 'dirname';
-use Cwd;
-use lib (Cwd::abs_path(dirname(__FILE__).'/..').'/examples/lib');
+  use File::Basename 'dirname';
+  use Cwd;
+  use lib (Cwd::abs_path(dirname(__FILE__) . '/..') . '/examples/lib');
 }
 use My;
 local $Params::Check::VERBOSE = 0;
+
 #Suppress some warnings from DBIx::Simple::Class during tests.
-local $SIG{__WARN__} = sub{
+local $SIG{__WARN__} = sub {
   warn $_[0] if $_[0] !~ /(generated accessors|is not such field)/;
 };
 
@@ -33,21 +34,13 @@ my $dbix;
 eval {
   $dbix = DBIx::Simple->connect('dbi:mysql:database=test;host=localhost',
     $ENV{USER}, '', {mysql_enable_utf8 => 1});
-} or plan skip_all => ($@ =~/Can't connect to local/?'Please start MySQL on localhost to enable this test.':$@);
+}
+  or plan skip_all => ($@ =~ /Can't connect to local/
+  ? 'Please start MySQL on localhost to enable this test.'
+  : $@);
 
-
-is($DSC->DEBUG,    0);
-is($DSC->DEBUG(1), 1);
-is($DSC->DEBUG(0), 0);
-like((eval { $DSC->dbix }, $@), qr/not instantiated/);
-like((eval { $DSC->dbix('') }, $@), qr/not instantiated/);
-isa_ok(ref($DSC->dbix($dbix)), 'DBIx::Simple');
-isa_ok(ref($DSC->dbix),        'DBIx::Simple');
-
-like((eval { $DSC->TABLE },   $@), qr/table-name for your class/);
-like((eval { $DSC->COLUMNS }, $@), qr/fields for your class/);
-like((eval { $DSC->CHECKS },  $@), qr/define your CHECKS subroutine/);
-is(ref($DSC->WHERE), 'HASH');
+My->dbix($dbix);
+isa_ok(ref($DSC->dbix), 'DBIx::Simple');
 
 my $groups_table = <<"T";
 CREATE TEMPORARY TABLE groups(
@@ -69,13 +62,7 @@ $dbix->query($groups_table);
 $dbix->query($users_table);
 
 #$DSC->DEBUG(1);
-isa_ok(ref(My->dbix($dbix)), 'DBIx::Simple');
-is(My->dbix, $DSC->dbix, 'same instance');
-isa_ok(ref(My::User->dbix), 'DBIx::Simple');
-is(My::User->TABLE, 'users');
-is_deeply(My::User->COLUMNS, [qw(id group_id login_name login_password disabled)]);
-is(ref(My::User->WHERE), 'HASH');
-is_deeply(My::User->WHERE, {disabled => 1});
+
 my $user;
 my $password = time;
 like(
@@ -87,13 +74,12 @@ like(
 
 ok($user = My::User->new(login_password => $password));
 
-like((eval { $user->BUILD() }, $@), qr/Call this method as/, 'BUILD() ok');
 is(
   My::User->BUILD(),
   $DSC->_attributes_made->{'My::User'},
   'if (eval $code) in BUILD() ok'
 );
-isa_ok(ref($user), $DSC);
+
 
 #defaults
 is($user->id, undef, 'id is undefined ok');
