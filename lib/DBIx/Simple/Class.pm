@@ -1,10 +1,9 @@
 package DBIx::Simple::Class;
-
 use 5.10.1;
 use strict;
 use warnings;
-use Params::Check;
 use Carp;
+use Params::Check;
 use DBIx::Simple;
 
 our $VERSION = '0.68';
