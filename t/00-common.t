@@ -9,6 +9,7 @@ BEGIN {
   use lib (Cwd::abs_path(dirname(__FILE__) . '/..') . '/examples/lib');
 }
 use My;
+use My::User;
 
 note(
   "Testing DBIx::Simple::Class database agnostic functionality$DBIx::Simple::Class::VERSION, Perl $], $^X"

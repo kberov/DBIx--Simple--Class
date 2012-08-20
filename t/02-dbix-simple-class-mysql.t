@@ -17,6 +17,9 @@ BEGIN {
   use lib (Cwd::abs_path(dirname(__FILE__) . '/..') . '/examples/lib');
 }
 use My;
+use My::Group;
+use My::User;
+
 local $Params::Check::VERBOSE = 0;
 
 #Suppress some warnings from DBIx::Simple::Class during tests.
