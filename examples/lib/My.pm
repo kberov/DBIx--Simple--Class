@@ -1,14 +1,13 @@
-package My;    #our schema
-use base qw(DBIx::Simple::Class);
+package #hide
+My;    #our schema
+use parent qw(DBIx::Simple::Class);
 use 5.10.1;
 use strict;
 use warnings;
 use utf8;
-sub namespace {__PACKAGE__}
+
 #put common to all subclasses functionality here
 
-use My::Group;
-use My::User;
 {
 
   package My::Collision;

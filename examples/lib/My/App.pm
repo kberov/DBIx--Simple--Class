@@ -1,11 +1,15 @@
-package My::App;
+package #hide
+My::App;
 use strict;
 use warnings;
 use utf8;
 use Data::Dumper;
-use CGI qw(:standard :html3);
-use DBD::SQLite;
+use CGI qw(:standard :html3 *table);
+
 use My;
+use My::Group;
+use My::User;
+
 
 sub new {
   my $class = shift;
@@ -77,10 +81,23 @@ TAB
 
 }
 
+sub q {$_->{q}||=CGI->new()}
+
+
+#Controlers
+
 sub action_list_users {
   my $app = shift;
   my $out = '';
-
+  my $U = 'My::User';
+  my @users = My::User->query('SELECT * from users');
+  
+  #for()
+  $out .= start_table({-border=>1})
+    .Tr({},[
+      th(My::User->COLUMNS), 
+    ])
+  .end_table();
   return $out;
 }
 
@@ -94,11 +111,11 @@ sub action_add_user {
 sub action_list_groups {
   my $app    = shift;
   my $G      = 'My::Group';
-  my @groups = $G->query($G->SQL('SELECT'));
+  my @groups = $G->query('SELECT * from groups');
   my $out    = '';
 
   if (@groups) {
-
+    #For your home work
   }
   else {
     $out .= h1('Please addd a group'), a({-href => 'action=add_group'}, 'Add');
@@ -111,7 +128,7 @@ sub action_list_groups {
 sub action_add_group {
   my $app = shift;
   my $out = '';
-
+  #For your home work
   return $out;
 }
 

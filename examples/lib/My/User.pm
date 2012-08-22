@@ -1,4 +1,5 @@
-package My::User;
+package #hide
+My::User;
 use base qw(My);
 use strict;
 use warnings;

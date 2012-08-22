@@ -1,8 +1,8 @@
+package #hide
+My::Groups;
 use strict;
 use warnings;
 use utf8;
-
-package My::Groups;
 use base qw (My);
 sub TABLE {'my groups'}                            #problem
 sub COLUMNS { ['id', 'group', 'is\' enabled'] }    #problem
