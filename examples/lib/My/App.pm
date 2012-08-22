@@ -1,5 +1,5 @@
-package #hide
-My::App;
+package    #hide
+  My::App;
 use strict;
 use warnings;
 use utf8;
@@ -47,7 +47,7 @@ sub run {
 
 
 sub initialise_db {
-  my $app  = shift;
+  my $app = shift;
   DBIx::Simple::Class->DEBUG(1);
 
   my $dbix = DBIx::Simple->connect(
@@ -81,23 +81,25 @@ TAB
 
 }
 
-sub q {$_->{q}||=CGI->new()}
+sub q { $_->{q} ||= CGI->new() }
 
 
 #Controlers
 
 sub action_list_users {
-  my $app = shift;
-  my $out = '';
-  my $U = 'My::User';
+  my $app   = shift;
+  my $out   = '';
+  my $U     = 'My::User';
   my @users = My::User->query('SELECT * from users');
-  
-  #for()
-  $out .= start_table({-border=>1})
-    .Tr({},[
-      th(My::User->COLUMNS), 
-    ])
-  .end_table();
+  my $rows  = [th([qw(id login_name login_password)]),];
+  for (@users) {
+    push @$rows, td([$_->id, $_->login_name, $_->login_password]);
+  }
+  $out
+    .= start_table({-border => 1})
+    . Tr({}, $rows)
+    . end_table()
+    . a({href => '?do=add_user'}, 'Add User');
   return $out;
 }
 
@@ -115,6 +117,7 @@ sub action_list_groups {
   my $out    = '';
 
   if (@groups) {
+
     #For your home work
   }
   else {
@@ -128,6 +131,7 @@ sub action_list_groups {
 sub action_add_group {
   my $app = shift;
   my $out = '';
+
   #For your home work
   return $out;
 }

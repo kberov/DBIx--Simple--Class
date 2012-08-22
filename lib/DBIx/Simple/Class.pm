@@ -234,7 +234,7 @@ sub select {
 
 sub query {
   my $class = shift;
-  local $Carp::CarpLevel = $Carp::CarpLevel+1;
+  local $Carp::CarpLevel = $Carp::CarpLevel + 1;
   return $class->dbix->query(@_) if $class->is_base_class;
   $class->new_from_dbix_simple($class->dbix->query(@_));
 }
@@ -265,10 +265,10 @@ sub BUILD {
     return;
   };
   #
-  if($class->is_base_class){
+  if ($class->is_base_class) {
     carp "Nothing more to build. This is the base class: $class" if $DEBUG;
     return;
-  };
+  }
   (!ref $class)
     || croak("Call this method as $class->BUILD()");
   $class->_UNQUOTED->{TABLE}   = $class->TABLE;

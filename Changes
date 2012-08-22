@@ -1,7 +1,8 @@
 Revision history for DBIx::Simple::Class
 
-0.69    2012-08-19 22:49:11 EEST
+0.69    2012-08-23 01:50 EEST
         - This is a major release.
+        Added examples
         Test Coverage:
         file      stmt  bran  cond  sub   pod   time  total
         Class.pm  97.9  94.1  70.9  100.0 100.0 90.7  94.4

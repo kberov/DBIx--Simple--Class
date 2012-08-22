@@ -1,5 +1,5 @@
-package #hide
-My;    #our schema
+package    #hide
+  My;      #our schema
 use parent qw(DBIx::Simple::Class);
 use 5.10.1;
 use strict;
