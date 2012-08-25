@@ -1,6 +1,10 @@
 Changes
+examples/.htaccess
 examples/lib/My.pm
+examples/lib/My/App.pm
+examples/lib/My/Group.pm
 examples/lib/My/Groups.pm
+examples/lib/My/User.pm
 examples/users.cgi
 ignore.txt
 lib/DBIx/Simple/Class.pm

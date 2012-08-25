@@ -19,19 +19,15 @@ DBIx::Simple, DBI, DBD::SQLite (for running tests only)
 
 DESCRIPTION
 
-This module is written to replace most of the abstraction stuff from the base model
- class in the MYDLjE project on github, but can be used independently as well.
-
-The class provides useful methods which simplify representing rows from tables as Perl
- objects and modifying them. It is not intended to be a full featured ORM. It does not
- provide relational mapping (yet...). This is left to the developers using this class.
-
-DBIx::Simple::Class is a database table/row abstraction. At the same time it is not just
- a fancy representation of a table row like DBIx::Simple::Result::RowObject. Using this
- module will make your code more organized, clean and reliable (separation of concerns +
- input-validation). You will even get some more performance over plain DBIx::Simple
- while keeping its' sexy features when you need them.Last but not least, this module 
- has no other non-CORE dependencies besides DBIx::Simple. See below for details.
+DBIx::Simple::Class is a database table/row abstraction. At the same
+time it is not just a fancy representation of a table row like
+L<DBIx::Simple::Result::RowObject>. Using this module will make your
+code more organized, clean and reliable
+(separation of concerns + input-validation).
+You will even get some more performance over plain DBIx::Simple
+while keeping its' sexy features when you need them. Last but not
+least, this module has no other non-CORE dependencies besides
+L<DBIx::Simple> and L<DBI>.
 
 SYNOPSIS
 

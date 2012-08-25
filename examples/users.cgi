@@ -1,5 +1,5 @@
 #!/usr/bin/env perl
-# Example minimal and naive CGI application.
+# Example - minimal and naive CGI application.
 # Try also Mojolicious + Mojolicious::Plugin::DSC
 #See My::App
 use 5.10.1;

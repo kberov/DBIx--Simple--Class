@@ -1,15 +1,18 @@
 Revision history for DBIx::Simple::Class
 
-0.69    2012-08-23 01:50 EEST
+0.69    2012-08-25 19:48:44 EEST
         - This is a major release.
-        Added examples
-        Test Coverage:
+        - Improved DESCRIPTION in pod.
+        - Added examples. See examples/lib/My
+        - Test Coverage:
         file      stmt  bran  cond  sub   pod   time  total
         Class.pm  97.9  94.1  70.9  100.0 100.0 90.7  94.4
         - Moved database agnostic tests to 00-common.t
         - Addedd is_base_class for detecting direct inheritance
         from DBIx::Simple::Class.
-        - Improved query(). Can be used by base class for directly calling dbix->query().
+        - Improved query(). Can be used by base class for directly
+        calling $class->dbix->query().
+        My::BaseClass->query(...) == $dbix->query(...)
         - Improved debug and error messages.
         - Rearanged BUILD()
 
