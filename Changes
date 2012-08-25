@@ -1,4 +1,7 @@
 Revision history for DBIx::Simple::Class
+0.69.1  2012-08-25 23:31:52 EEST
+        - Cleanup.
+        - Fixed MANIFEST
 
 0.69    2012-08-25 19:48:44 EEST
         - This is a major release.

@@ -15,7 +15,6 @@ use My::User;
 sub action_list_users {
   my $app   = shift;
   my $out   = '';
-  my $U     = 'My::User';
   my @users = My::User->query('SELECT * from users');
   my $rows  = [th({class => "header_cols"}, [qw(id login_name login_password)]),];
   for (@users) {

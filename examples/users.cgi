@@ -11,8 +11,11 @@ BEGIN {
   use Cwd;
   $ENV{users_HOME} = Cwd::abs_path(dirname(__FILE__));
 }
-use lib ($ENV{users_HOME}.'/lib');
+
+#Replace with your own library directories
+#use lib('/home/berov/opt/perl5/lib/perl5','/home/berov/opt/perl5/lib/perl5/x86_64-linux-gnu-thread-multi');
 use lib (Cwd::abs_path($ENV{users_HOME}.'/../lib'));
+use lib ($ENV{users_HOME}.'/lib');
 use My::App;
 
 My::App->run();

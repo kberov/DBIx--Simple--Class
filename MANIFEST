@@ -17,7 +17,5 @@ t/01-dbix-simple-class-sqlite.t
 t/02-dbix-simple-class-mysql.t
 t/boilerplate.t
 t/manifest.t
-t/My.pm
-t/My/Groups.pm
 t/pod-coverage.t
 t/pod.t
