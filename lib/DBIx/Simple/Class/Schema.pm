@@ -4,17 +4,34 @@ use 5.10.1;
 use warnings;
 use Carp;
 use parent 'DBIx::Simple::Class';
+*_get_obj_args = \&DBIx::Simple::Class::_get_obj_args;
 
-sub load_schema{
-  
+sub load_schema {
+  my ($class, $args) = _get_obj_args(@_);
+
+  #see https://metacpan.org/module/DBI#table_info
+  my $tables = $class->dbh->table_info(
+    undef, undef,
+    $args->{table} || '%',
+    $args->{type}  || "'TABLE','VIEW'"
+  )->fetchall_arrayref({});
+
+  #return $tables;
+  my $tables_columns = {};
+  foreach my $table (@$tables) {
+    $tables_columns->{$table->{TABLE_NAME}} =
+      $class->dbh->column_info(undef, undef, $table->{TABLE_NAME}, '%')
+      ->fetchall_arrayref({});
+  }
+  return $tables_columns;
 }
 
 sub dump_schema_at {
-  
+
 }
 
 sub dump_class_at {
-  
+
 }
 
 1;

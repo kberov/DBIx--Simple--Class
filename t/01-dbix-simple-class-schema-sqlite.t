@@ -52,11 +52,19 @@ CREATE TABLE IF NOT EXISTS users (
 )
 TAB
 
+$dbix->query(<<'TAB');
+CREATE TABLE groups(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  group_name VARCHAR(12)
+  )
+TAB
+
+
 TODO: {
   local $TODO = "load_schema, dump_schema_at and dump_class_at  not finished";
 
 #load_schema
-
+#warn Dumper($DSCS->load_schema);
 
 #dump_schema_at
 
@@ -69,8 +77,9 @@ my $tsth = $dbh->table_info(undef, '%main%', '%%', "table", {});
 
 #warn Dumper($tsth->fetchall_arrayref({}));
 foreach (keys %GetInfoType) {
-
-#say $_.': '. (my $i = $dbh->get_info($GetInfoType{$_})|| '');
+my $i;
+#say $_.': '. ($i = $dbh->get_info($GetInfoType{$_})|| '');
+#say "     $i" if $_ =~/sche/i;
 }
 
 {
