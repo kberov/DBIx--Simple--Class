@@ -63,8 +63,10 @@ TAB
 TODO: {
   local $TODO = "load_schema, dump_schema_at and dump_class_at  not finished";
 
+  warn Dumper($DSCS->_get_table_info());
+
 #load_schema
-#warn Dumper($DSCS->load_schema);
+  warn Dumper($DSCS->load_schema(namespace => 'Your'));
 
 #dump_schema_at
 
@@ -77,7 +79,8 @@ my $tsth = $dbh->table_info(undef, '%main%', '%%', "table", {});
 
 #warn Dumper($tsth->fetchall_arrayref({}));
 foreach (keys %GetInfoType) {
-my $i;
+  my $i;
+
 #say $_.': '. ($i = $dbh->get_info($GetInfoType{$_})|| '');
 #say "     $i" if $_ =~/sche/i;
 }
