@@ -53,17 +53,20 @@ CREATE TEMPORARY TABLE groups(
   group_name VARCHAR(12)
   )
 T
+
+$dbix->query($groups_table);
+
+
 my $users_table = <<"T";
 CREATE TEMPORARY TABLE users(
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  group_id INT default 1,
+  group_id INT DEFAULT 1,
   login_name VARCHAR(12),
   login_password VARCHAR(100), 
   disabled INT DEFAULT 1
   )
 T
 
-$dbix->query($groups_table);
 $dbix->query($users_table);
 
 #$DSC->DEBUG(1);
