@@ -49,20 +49,14 @@ CREATE TABLE IF NOT EXISTS `users` (
   `group_id` int(11) NOT NULL COMMENT 'Primary group for this user',
   `login_name` varchar(100) NOT NULL,
   `login_password` varchar(100) NOT NULL COMMENT 'Mojo::Util::md5_sum($login_name.$login_password)',
-  `first_name` varchar(255) NOT NULL DEFAULT '',
-  `last_name` varchar(255) NOT NULL DEFAULT '',
+  `name` varchar(255) NOT NULL DEFAULT '',
   `email` varchar(255) NOT NULL DEFAULT 'email@domain.com',
-  `description` varchar(255) DEFAULT NULL,
-  `created_by` int(11) NOT NULL DEFAULT '1'  COMMENT 'id of who created this user.',
-  `changed_by` int(11) NOT NULL DEFAULT '1' COMMENT 'Who modified this user the last time?',
-  `tstamp` int(11) NOT NULL DEFAULT '0' COMMENT 'last modification time',
-  `reg_tstamp` int(11) NOT NULL DEFAULT '0' COMMENT 'registration time',
   `disabled` tinyint(1) NOT NULL DEFAULT '0',
+  balance DECIMAL(8,2) NOT NULL DEFAULT '0.00',
   PRIMARY KEY (`id`),
   UNIQUE KEY `login_name` (`login_name`),
   UNIQUE KEY `email` (`email`),
-  KEY `group_id` (`group_id`),
-  KEY `reg_tstamp` (`reg_tstamp`)
+  KEY `group_id` (`group_id`)
 ) ENGINE=InnoDB  DEFAULT CHARSET=utf8 ROW_FORMAT=COMPACT COMMENT='This table stores the users'
 
 TAB
@@ -83,8 +77,7 @@ TAB
 
 my $tables = $DSCS->_get_table_info();
 $DSCS->_get_column_info($tables);
-$DSCS->_generate_COLUMNS($tables);
-$DSCS->_generate_ALIASES($tables);
+$DSCS->_generate_PRIMARY_KEY_COLUMNS_ALIASES_CHECKS($tables);
 ok((grep { $_->{TABLE_NAME} eq 'users' || $_->{TABLE_NAME} eq 'groups' } @$tables),
   '_get_table_info works');
 my @column_infos = (@{$tables->[0]->{column_info}}, @{$tables->[1]->{column_info}});
@@ -95,7 +88,7 @@ is((grep { $_ eq 'is_blocked' || $_ eq 'column_data' } values %alaiases),
 TODO: {
   local $TODO = "load_schema, dump_schema_at and dump_class_at  not finished";
   warn $dbix->dbh->{Name};
-  $DSCS->_generate_CHECKS($tables);
+
   warn Dumper($tables);
 
 #load_schema

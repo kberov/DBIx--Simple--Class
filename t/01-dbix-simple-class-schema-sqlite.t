@@ -35,10 +35,10 @@ CREATE TABLE IF NOT EXISTS users (
   group_id int(11) NOT NULL, -- COMMENT 'Primary group for this user'
   login_name varchar(100) NOT NULL,
   login_password varchar(100) NOT NULL, -- COMMENT 'Mojo::Util::md5_sum($login_name.$login_password)'
-  first_name varchar(255) NOT NULL DEFAULT '',
-  last_name varchar(255) NOT NULL DEFAULT '',
+  name varchar(255) NOT NULL DEFAULT '',
   email varchar(255) NOT NULL DEFAULT 'email@domain.com',
   disabled tinyint(1) NOT NULL DEFAULT '0',
+  balance DECIMAL(8,2) NOT NULL DEFAULT '0.00',
   UNIQUE(login_name) ON CONFLICT ROLLBACK,
   UNIQUE(email) ON CONFLICT ROLLBACK
 
@@ -58,8 +58,7 @@ TAB
 
 my $tables = $DSCS->_get_table_info();
 $DSCS->_get_column_info($tables);
-$DSCS->_generate_COLUMNS($tables);
-$DSCS->_generate_ALIASES($tables);
+$DSCS->_generate_PRIMARY_KEY_COLUMNS_ALIASES_CHECKS($tables);
 ok((grep { $_->{TABLE_NAME} eq 'users' || $_->{TABLE_NAME} eq 'groups' } @$tables),
   '_get_table_info works');
 my @column_infos = (
@@ -72,14 +71,36 @@ my %alaiases =
   (%{$tables->[0]->{ALIASES}}, %{$tables->[1]->{ALIASES}}, %{$tables->[2]->{ALIASES}});
 is((grep { $_ eq 'is_blocked' || $_ eq 'column_data' } values %alaiases),
   2, '_generate_ALIASES works');
+
+my %checks =
+  (%{$tables->[0]->{CHECKS}}, %{$tables->[1]->{CHECKS}}, %{$tables->[2]->{CHECKS}});
+like('alaba_anica2', qr/$checks{group_name}->{allow}/, 'checks VARCHAR(12) works fine');
+unlike(
+  'alaba_anica13',
+  qr/$checks{group_name}->{allow}/,
+  'checks VARCHAR(12) works fine'
+);
+like('1',  qr/$checks{id}->{allow}/, 'checks INT works fine');
+like('11', qr/$checks{id}->{allow}/, 'checks INT works fine');
+unlike('a', qr/$checks{id}->{allow}/, 'checks INT works fine');
+like('1',          qr/$checks{data}->{allow}/, 'checks TEXT works fine');
+like('11sd,asd,a', qr/$checks{data}->{allow}/, 'checks TEXT works fine');
+unlike('', qr/$checks{'is blocked'}->{allow}/, 'checks TEXT works fine');
+like('1', qr/$checks{disabled}->{allow}/, 'checks TINYINT(1) works fine');
+unlike('11', qr/$checks{disabled}->{allow}/, 'checks TINYINT(1) works fine');
+unlike('a',  qr/$checks{disabled}->{allow}/, 'checks TINYINT(1) works fine');
+like('1',         qr/$checks{balance}->{allow}/, 'checks DECIMAL(8,2) works fine');
+like('11.2',      $checks{balance}->{allow},     'checks DECIMAL(8,2) works fine');
+like('123456.20', $checks{balance}->{allow},     'checks DECIMAL(8,2) works fine');
+unlike('1234567.2', $checks{balance}->{allow},     'checks DECIMAL(8,2) works fine');
+unlike('a',         qr/$checks{balance}->{allow}/, 'checks DECIMAL(8,2) works fine');
 TODO: {
-  local $TODO = "load_schema, dump_schema_at and dump_class_at  not finished";
+  local $TODO = "load_schema, dump_schema_at - not finished";
   warn $dbix->dbh->{Name};
-  $DSCS->_generate_CHECKS($tables);
-  warn Dumper($tables);
+  warn Dumper($tables->[-1]);
 
 #load_schema
-  #warn Dumper($DSCS->load_schema(namespace => 'Your'));
+  warn $DSCS->load_schema();
 
 #dump_schema_at
 
@@ -87,22 +108,4 @@ TODO: {
 }
 
 
-my $dbh = $dbix->dbh;
-my $tsth = $dbh->table_info(undef, '%main%', '%%', "table", {});
-
-#warn Dumper($tsth->fetchall_arrayref({}));
-foreach (keys %GetInfoType) {
-  my $i;
-
-#say $_.': '. ($i = $dbh->get_info($GetInfoType{$_})|| '');
-#say "     $i" if $_ =~/sche/i;
-}
-
-{
-  no strict 'refs';
-  foreach (@{$DBI::EXPORT_TAGS{sql_types}}) {
-
-    #printf "%s=%d\n", $_, &{"DBI::$_"};
-  }
-}
 done_testing;
