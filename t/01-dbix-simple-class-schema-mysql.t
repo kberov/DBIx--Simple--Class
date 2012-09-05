@@ -36,7 +36,7 @@ eval {
 
 
 isa_ok(ref($DSCS->dbix($dbix)), 'DBIx::Simple');
-can_ok($DSCS, qw(load_schema dump_schema_at dump_class_at));
+can_ok($DSCS, qw(load_schema dump_schema_at));
 
 
 #create some tables
@@ -87,16 +87,12 @@ is((grep { $_ eq 'is_blocked' || $_ eq 'column_data' } values %alaiases),
   2, '_generate_ALIASES works');
 TODO: {
   local $TODO = "load_schema, dump_schema_at and dump_class_at  not finished";
-  warn $dbix->dbh->{Name};
 
-  warn Dumper($tables);
-
+#warn Dumper($tables);
 #load_schema
-  warn Dumper($DSCS->load_schema);
-
+my $code = $DSCS->load_schema();
+ok((eval{$code}),'code generated ok') or diag($@);
 #dump_schema_at
-
-#dump_class_at
 }
 
 

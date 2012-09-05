@@ -1,7 +1,7 @@
 package DBIx::Simple::Class::Schema;
 use strict;
-use 5.10.1;
 use warnings;
+use 5.10.1;
 use Carp;
 use parent 'DBIx::Simple::Class';
 use Data::Dumper;
@@ -11,9 +11,16 @@ use Data::Dumper;
 #struct to keep schemas while building
 my $schemas = {};
 
+#for accessing schema structures during tests
+sub _schemas {
+  $_[2] && ($schemas->{$_[1]} = $_[2]);
+  return $_[1] && exists $schemas->{$_[1]} ? $schemas->{$_[1]} : undef;
+}
 
 sub _get_table_info {
   my ($class, $args) = _get_obj_args(@_);
+
+  $args->{namespace} || croak('Please pass "namespace" argument');
 
   #get tables from the current database
   #see https://metacpan.org/module/DBI#table_info
@@ -43,17 +50,17 @@ sub _generate_PRIMARY_KEY_COLUMNS_ALIASES_CHECKS {
 
     $t->{PRIMARY_KEY} =
       $class->dbh->primary_key_info(undef, undef, $t->{TABLE_NAME})
-      ->fetchall_arrayref({})->[0]->{COLUMN_NAME} ||'';
+      ->fetchall_arrayref({})->[0]->{COLUMN_NAME} || '';
 
-    $t->{COLUMNS} = [];
-    $t->{ALIASES} = {};
-    $t->{CHECKS}  = {};
+    $t->{COLUMNS}           = [];
+    $t->{ALIASES}           = {};
+    $t->{CHECKS}            = {};
     $t->{QUOTE_IDENTIFIERS} = 0;
     foreach my $col (sort { $a->{ORDINAL_POSITION} <=> $b->{ORDINAL_POSITION} }
       @{$t->{column_info}})
     {
       push @{$t->{COLUMNS}}, $col->{COLUMN_NAME};
-      
+
       #generate ALIASES
       if ($col->{COLUMN_NAME} =~ /\W/) {    #not A-z0-9_
         $t->{QUOTE_IDENTIFIERS} = 1;
@@ -96,19 +103,19 @@ sub _generate_PRIMARY_KEY_COLUMNS_ALIASES_CHECKS {
 }
 
 
-sub generate_CODE {
+sub _generate_CODE {
   my ($class, $args) = @_;
   my $code      = '';
   my $namespace = $args->{namespace};
-  my $tables = $schemas->{$namespace}{tables};
-  $schemas->{$namespace}{code}=[];
+  my $tables    = $schemas->{$namespace}{tables};
+  $schemas->{$namespace}{code} = [];
 
   push @{$schemas->{$namespace}{code}}, <<"BASE_CLASS";
 package $namespace;
 use string;
 use warnings;
 use parent 'DBIx::Simple::Class';
-
+our \$VERSION = '0.01';
 sub base_class{1}
 1;
 BASE_CLASS
@@ -116,11 +123,11 @@ BASE_CLASS
 
   foreach my $t (@$tables) {
     my $package = $namespace . '::' . ucfirst(lc($t->{TABLE_NAME}));
-    my $COLUMNS = Data::Dumper->Dump([$t->{COLUMNS}],['$COLUMNS']);
-    my $ALIASES = Data::Dumper->Dump([$t->{ALIASES}],['$ALIASES']);
-    my $CHECKS = Data::Dumper->Dump([$t->{CHECKS}],['$CHECKS']);
-    my $TABLE = Data::Dumper->Dump([$t->{TABLE_NAME}],['$TABLE_NAME']);
-    push @{$schemas->{$namespace}{code}}, <<"TABLE_CLASS";
+    my $COLUMNS = Data::Dumper->Dump([$t->{COLUMNS}], ['$COLUMNS']);
+    my $ALIASES = Data::Dumper->Dump([$t->{ALIASES}], ['$ALIASES']);
+    my $CHECKS  = Data::Dumper->Dump([$t->{CHECKS}], ['$CHECKS']);
+    my $TABLE   = Data::Dumper->Dump([$t->{TABLE_NAME}], ['$TABLE_NAME']);
+    push @{$schemas->{$namespace}{code}}, qq|
 package $package;
 use string;
 use warnings;
@@ -141,49 +148,23 @@ __PACKAGE__->QUOTE_IDENTIFIERS($t->{QUOTE_IDENTIFIERS});
 #__PACKAGE__->BUILD;#build accessors during load
 
 1;
-
-__END__
-
-=pod 
-
-=encoding utf8
-
-=head1 NAME
+|
+.qq|$/__END__$/$/=pod$/$/=encoding utf8$/$/=head1 NAME
 
 $package - A class for $t->{TABLE_TYPE} $t->{TABLE_NAME} in $t->{column_info}[0]{TABLE_SCHEM}
 
-=head1 SYNOPSIS
+|.qq|=head1 SYNOPSIS$/$/=head1 DESCRIPTION$/$/=head1 COLUMNS$/$/Each column in this class has an accessor.
+|.qq|$/=head1 ALIASES$/$/=head1 GENERATOR$/$/L<${\(__PACKAGE__)}>$/$/=head1 SEE ALSO
+$/$/L<$namespace>,L<DBIx::Simple::Class>, L<${\(__PACKAGE__)}>
+|;
 
-
-=head1 DESCRIPTION
-
-
-
-=head1 COLUMNS
-
-Each column in this class has an accessor.
-
-=head1 ALIASES
-
-
-=head1 GENERATOR
-
-L<${\(__PACKAGE__)}>
-
-=head1 SEE ALSO
-
-L<$namespace>,
-L<DBIx::Simple::Class>, L<${\(__PACKAGE__)}>
-
-
-TABLE_CLASS
-
-  }# end foreach my $t (@$tables)
-  if(defined wantarray){
+  }    # end foreach my $t (@$tables)
+  if (defined wantarray) {
     foreach (@{$schemas->{$namespace}{code}}) {
       $code .= $_;
     }
   }
+
   #TODO wallk the structure and build code
 
   return $code;
@@ -209,23 +190,72 @@ sub load_schema {
   $class->_generate_PRIMARY_KEY_COLUMNS_ALIASES_CHECKS($tables);
 
   #generate code
-    if(defined wantarray){
-      return $class->generate_CODE($args);
-    }
-    else{
-      $class->generate_CODE($args);
-    }
-    return;
+  if (defined wantarray) {
+    return $class->_generate_CODE($args);
+  }
+  else {
+    $class->_generate_CODE($args);
+  }
+  return;
 }
 
 
 sub dump_schema_at {
   my ($class, $args) = _get_obj_args(@_);
+  $args->{lib_root} ||= $INC[0];
+  my ($namespace, @namespace, @base_path, $schema_path);
 
-}
+  #_generate_CODE() should be called by now
+  $namespace = (keys %$schemas)[0];    #we always have only one key
 
-sub dump_class_at {
+  $namespace || Carp::croak('Please first call ' . __PACKAGE__ . '->load_schema()!');
 
+  require Module::Load::Conditional;
+  require File::Path;
+  require File::Spec;
+  require IO::File;
+  @namespace = split /::/, $namespace;
+  @base_path = File::Spec->splitdir($args->{lib_root});
+
+  $schema_path = File::Spec->catdir(@base_path, @namespace);
+  if ((-f "$schema_path.pm" || -d $schema_path) && !$args->{overwrite}) {
+    carp($schema_path . ' exists. Quitting...');
+    return;
+  }
+  if (my $href = Module::Load::Conditional::check_install(module => $namespace)) {
+    carp( "$namespace found at $href->{file}.$/"
+        . "Please avoid namespace collisions.$/ Quitting...");
+    return;
+  }
+  carp('Will dump schema at ' . $args->{lib_root});
+
+  #We we should be able to continue safely now...
+  my $tables  = $schemas->{$namespace}{tables};
+  my $code    = $schemas->{$namespace}{code};
+  my $base_fh = IO::File->new("> $schema_path.pm");
+  if (defined $base_fh) {
+    print $base_fh $code->[0];
+    $base_fh->close;
+  }
+  else {
+    carp("$!.$/ Quitting...");
+    return;
+  }
+
+  File::Path::make_path($schema_path);
+  foreach my $i (0 .. @$tables - 1) {
+    my $filename = ucfirst(lc($tables->[$i]{TABLE_NAME})) . '.pm';
+    my $fh = IO::File->new("> $schema_path/$filename");
+    if (defined $fh) {
+      print $fh $code->[$i + 1];
+      $fh->close;
+    }
+    else {
+      carp("$!.$/ Quitting...");
+      return;
+    }
+  }
+  return 1;
 }
 
 1;
@@ -251,6 +281,7 @@ DBIx::Simple::Class::Schema - Create and use classes representing tables from a 
   #Now eval() to use your classes.
   eval $perl_code || croak($@);
 
+
   #Or load and save it for more customisations and later usage.
   DBIx::Simple::Class::Schema->load_schema(
     namespace =>'My::Model',
@@ -258,9 +289,9 @@ DBIx::Simple::Class::Schema - Create and use classes representing tables from a 
     type  => "'TABLE','VIEW'", # make classes for tables and views
   );
   DBIx::Simple::Class::Schema->dump_schema_at(
-    lib_root => "$ENV{HOME}/$ENV{PERL_LOCAL_LIB_ROOT}/lib"
+    lib_root => "$ENV{PERL_LOCAL_LIB_ROOT}/lib"
     overwrite =>1 #overwrite existing files
-  );
+  ) || Carp::croak 'Something went wrong! See above...';
 
 
 =head1 DESCRIPTION
@@ -269,6 +300,34 @@ DBIx::Simple::Class::Schema automates the creation of classes from
 database tables. You can use it when you want to prototype quickly
 your application. It is also very convenient as an initial generator and dumper of
 your classes representing your database tables.
+
+=head1 METHODS
+
+=head2 load_schema
+
+Class method.
+
+  Params:
+    namespace - String. The class name for your base class,
+      default: ucfirst(lc($databse))
+    table - SQL string for a LIKE clause,
+      default: '%'
+    type - String. "TABLE" or/and "VIEW" database obects
+      default: "'TABLE','VIEW'"
+Extracts tables' information from the current connection and generates
+Perl classes representing those tabels or views.
+If not called in void context returns all the generated code.
+This makes it very convenient for quickly prototyping applications
+by just using tables in your database.
+
+  my $perl_code = DBIx::Simple::Class::Schema->load_schema();
+  eval $perl_code || croak($@);
+  @...
+  my $user = Dbname::User->find(2345);
+
+=head2 dump_schema_at
+
+
 
 =head1 LICENSE AND COPYRIGHT
 

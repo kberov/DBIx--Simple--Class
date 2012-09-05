@@ -25,7 +25,7 @@ use_ok('DBIx::Simple::Class::Schema');
 my $DSCS = 'DBIx::Simple::Class::Schema';
 my $dbix = DBIx::Simple->connect('dbi:SQLite:dbname=:memory:', {sqlite_unicode => 1});
 isa_ok(ref($DSCS->dbix($dbix)), 'DBIx::Simple');
-can_ok($DSCS, qw(load_schema dump_schema_at dump_class_at));
+can_ok($DSCS, qw(load_schema dump_schema_at));
 
 #=pod
 #create some tables
@@ -55,10 +55,8 @@ CREATE TABLE groups(
   data TEXT
   )
 TAB
-
-my $tables = $DSCS->_get_table_info();
-$DSCS->_get_column_info($tables);
-$DSCS->_generate_PRIMARY_KEY_COLUMNS_ALIASES_CHECKS($tables);
+my $code = $DSCS->load_schema();
+my $tables = $DSCS->_schemas('Memory')->{tables};
 ok((grep { $_->{TABLE_NAME} eq 'users' || $_->{TABLE_NAME} eq 'groups' } @$tables),
   '_get_table_info works');
 my @column_infos = (
@@ -96,11 +94,11 @@ unlike('1234567.2', $checks{balance}->{allow},     'checks DECIMAL(8,2) works fi
 unlike('a',         qr/$checks{balance}->{allow}/, 'checks DECIMAL(8,2) works fine');
 TODO: {
   local $TODO = "load_schema, dump_schema_at - not finished";
-  warn $dbix->dbh->{Name};
-  warn Dumper($tables->[-1]);
 
 #load_schema
-  warn $DSCS->load_schema();
+ok((eval{$code}),'code generated ok') or diag($@);
+$DSCS->dump_schema_at();
+#dump_schema_at
 
 #dump_schema_at
 
