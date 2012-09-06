@@ -20,6 +20,24 @@ BEGIN {
 
 use DBI::Const::GetInfoType;
 use Data::Dumper;
+
+#Suppress some warnings from DBIx::Simple::Class during tests.
+local $SIG{__WARN__} = sub {
+  if (
+    $_[0] =~ /(Will\sdump\sschema\sat
+         |exists
+         |avoid\snamespace\scollisions
+         |\w+\.pm|make\spath)/x
+    )
+  {
+    my ($package, $filename, $line, $subroutine) = caller(2);
+    ok($_[0], $subroutine . " warns '$1' OK");
+  }
+  else {
+    warn $_[0];
+  }
+};
+
 use_ok('DBIx::Simple::Class::Schema');
 
 my $DSCS = 'DBIx::Simple::Class::Schema';
@@ -55,7 +73,20 @@ CREATE TABLE groups(
   data TEXT
   )
 TAB
-my $code = $DSCS->load_schema();
+
+#BARE DEFAULTS
+like(
+  (eval { $DSCS->dump_schema_at() }, $@),
+  qr/Please first call/,
+  'dump_schema_at() croaks OK'
+);
+require File::Path;
+File::Path::remove_tree($INC[0] . '/Memory');
+unlink($INC[0] . '/Memory.pm');
+File::Path::remove_tree($INC[0] . '/Your');
+
+ok(my $code = $DSCS->load_schema(), 'scalar context OK');
+ok(my @code = $DSCS->load_schema(), 'list context OK');
 my $tables = $DSCS->_schemas('Memory')->{tables};
 ok((grep { $_->{TABLE_NAME} eq 'users' || $_->{TABLE_NAME} eq 'groups' } @$tables),
   '_get_table_info works');
@@ -92,12 +123,46 @@ like('11.2',      $checks{balance}->{allow},     'checks DECIMAL(8,2) works fine
 like('123456.20', $checks{balance}->{allow},     'checks DECIMAL(8,2) works fine');
 unlike('1234567.2', $checks{balance}->{allow},     'checks DECIMAL(8,2) works fine');
 unlike('a',         qr/$checks{balance}->{allow}/, 'checks DECIMAL(8,2) works fine');
+ok((eval {$code}), 'code generated ok') or diag($@);
+ok($DSCS->dump_schema_at(), 'dump_schema_at dumps code to files OK');
+use_ok('Memory::Groups');
+use_ok('Memory::Users');
+
+#END BARE DEFAULTS
+#Now we should have some files to remove
+ok(!$DSCS->dump_schema_at(), 'quits OK');
+unlink($INC[0] . '/Memory.pm');
+ok(!$DSCS->dump_schema_at(), 'quits OK');
+ok($DSCS->dump_schema_at(overwrite => 1), 'overwrites OK');
+ok(!$DSCS->dump_schema_at(overwrite => 1), 'quits OK');
+unlink($INC[0] . '/Memory.pm');
+chmod 0444, $INC[0] . '/Memory/Users.pm';
+ok(!$DSCS->dump_schema_at(overwrite => 1), 'quits OK');
+chmod 0644, $INC[0] . '/Memory/Users.pm';
+File::Path::remove_tree($INC[0] . '/Memory');
+unlink($INC[0] . '/Memory.pm');
+
+#PARAMS
+delete $DSCS->_schemas->{Memory};
+$DSCS->load_schema(namespace => 'Your::Model', table => '%user%', type => "'TABLE'")
+  ;    #void context ok
+isa_ok($DSCS->_schemas('Your::Model'),
+  'HASH', 'load_schema creates Your::Model namespace OK');
+
+#warn Dumper($DSCS->_schemas('Your::Model')->{tables});
+is($DSCS->_schemas('Your::Model')->{tables}[0]->{TABLE_NAME},
+  'users', 'first table is "users"');
+is(scalar @{$DSCS->_schemas('Your::Model')->{tables}}, 1, 'the only table is "users"');
+chmod 0444, $INC[0];
+ok(!$DSCS->dump_schema_at(lib_root => $INC[0]), 'quits OK');
+chmod 0755, $INC[0];
+ok($DSCS->dump_schema_at(lib_root => $INC[0]), 'dumps OK');
+File::Path::remove_tree($INC[0] . '/Your');
+
 TODO: {
   local $TODO = "load_schema, dump_schema_at - not finished";
 
 #load_schema
-ok((eval{$code}),'code generated ok') or diag($@);
-$DSCS->dump_schema_at();
 }
 
 

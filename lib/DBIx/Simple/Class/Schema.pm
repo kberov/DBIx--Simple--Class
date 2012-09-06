@@ -14,7 +14,7 @@ my $schemas = {};
 #for accessing schema structures during tests
 sub _schemas {
   $_[2] && ($schemas->{$_[1]} = $_[2]);
-  return $_[1] && exists $schemas->{$_[1]} ? $schemas->{$_[1]} : undef;
+  return $_[1] && exists $schemas->{$_[1]} ? $schemas->{$_[1]} : $schemas;
 }
 
 sub _get_table_info {
@@ -112,7 +112,7 @@ sub _generate_CODE {
 
   push @{$schemas->{$namespace}{code}}, <<"BASE_CLASS";
 package $namespace;
-use string;
+use strict;
 use warnings;
 use parent 'DBIx::Simple::Class';
 our \$VERSION = '0.01';
@@ -127,15 +127,14 @@ BASE_CLASS
     my $ALIASES = Data::Dumper->Dump([$t->{ALIASES}], ['$ALIASES']);
     my $CHECKS  = Data::Dumper->Dump([$t->{CHECKS}], ['$CHECKS']);
     my $TABLE   = Data::Dumper->Dump([$t->{TABLE_NAME}], ['$TABLE_NAME']);
-    push @{$schemas->{$namespace}{code}}, qq|
-package $package;
-use string;
+    push @{$schemas->{$namespace}{code}}, qq|package $package;
+| . qq|use strict;
 use warnings;
-use parent '$namespace';
-
+use parent qw($namespace);
+| . qq|
 sub base_class{0}
 my $TABLE
-sub TABLE { \$TABLE_NAME }
+sub TABLE { \$TABLE_NAME }| . qq|
 sub PRIMARY_KEY{'$t->{PRIMARY_KEY}'}
 my $COLUMNS
 sub COLUMNS { \$COLUMNS }
@@ -148,22 +147,21 @@ __PACKAGE__->QUOTE_IDENTIFIERS($t->{QUOTE_IDENTIFIERS});
 #__PACKAGE__->BUILD;#build accessors during load
 
 1;
-|
-.qq|$/__END__$/$/=pod$/$/=encoding utf8$/$/=head1 NAME
+| . qq|$/__END__$/$/=pod$/$/=encoding utf8$/$/=head1 NAME
 
-$package - A class for $t->{TABLE_TYPE} $t->{TABLE_NAME} in $t->{column_info}[0]{TABLE_SCHEM}
+$package - A class for $t->{TABLE_TYPE} $t->{TABLE_NAME} in schema $t->{TABLE_SCHEM}
 
-|.qq|=head1 SYNOPSIS$/$/=head1 DESCRIPTION$/$/=head1 COLUMNS$/
+| . qq|=head1 SYNOPSIS$/$/=head1 DESCRIPTION$/$/=head1 COLUMNS$/
 Each column in this class has an accessor.
-|.qq|$/=head1 ALIASES$/$/=head1 GENERATOR$/$/L<${\(__PACKAGE__)}>$/$/=head1 SEE ALSO
-$/$/L<$namespace>,L<DBIx::Simple::Class>, L<${\(__PACKAGE__)}>
-|;
-
+| . qq|$/=head1 ALIASES$/$/=head1 GENERATOR$/$/L<$class>$/$/=head1 SEE ALSO
+$/$/|
+      . qq|L<$namespace>,L<DBIx::Simple::Class>, L<$class>|;
   }    # end foreach my $t (@$tables)
   if (defined wantarray) {
-    if(wantarray){
+    if (wantarray) {
       return @{$schemas->{$namespace}{code}};
-    }else{
+    }
+    else {
       return join '', @{$schemas->{$namespace}{code}};
     }
   }
@@ -224,34 +222,37 @@ sub dump_schema_at {
   }
   if (my $href = Module::Load::Conditional::check_install(module => $namespace)) {
     carp( "$namespace found at $href->{file}.$/"
-        . "Please avoid namespace collisions.$/ Quitting...");
+        . "Please avoid namespace collisions. Quitting...");
     return;
   }
   carp('Will dump schema at ' . $args->{lib_root});
 
   #We we should be able to continue safely now...
-  my $tables  = $schemas->{$namespace}{tables};
-  my $code    = $schemas->{$namespace}{code};
+  my $tables = $schemas->{$namespace}{tables};
+  my $code   = $schemas->{$namespace}{code};
+  if (!$args->{overwrite} && !-d $schema_path) {
+    eval { File::Path::make_path($schema_path); }
+      || carp("Can not make path $schema_path.$/$!. Quitting...") && return;
+  }
   my $base_fh = IO::File->new("> $schema_path.pm");
   if (defined $base_fh) {
     print $base_fh $code->[0];
     $base_fh->close;
   }
   else {
-    carp("$!.$/ Quitting...");
+    carp("$schema_path.pm: $!. Quitting...");
     return;
   }
 
-  eval {File::Path::make_path($schema_path);}|| carp("$!.$/ Quitting...") && return;
   foreach my $i (0 .. @$tables - 1) {
     my $filename = ucfirst(lc($tables->[$i]{TABLE_NAME})) . '.pm';
-    my $fh = IO::File->new("> $schema_path/$filename");
+    my $fh       = IO::File->new("> $schema_path/$filename");
     if (defined $fh) {
       print $fh $code->[$i + 1];
       $fh->close;
     }
     else {
-      carp("$!.$/ Quitting...");
+      carp("$schema_path/$filename: $!. Quitting!");
       return;
     }
   }
@@ -312,7 +313,7 @@ Class method.
       default: ucfirst(lc($databse))
     table - SQL string for a LIKE clause,
       default: '%'
-    type - String. "TABLE" or/and "VIEW" database obects
+    type - SQL String for an IN clause.
       default: "'TABLE','VIEW'"
 
 Extracts tables' information from the current connection and generates
@@ -391,6 +392,9 @@ matching C</INT/i>,C</FLOAT|DOUBLE|DECIMAL/i>, C</CHAR|TEXT|CLOB/i>.
 You are supposed to write your own business-specific checks.
 
 
+=head1 SEE ALSO
+
+L<DBIx::Simple::Class>, L<DBIx::Simple>, L<DBIx::Class::Schema::Loader>
 
 =head1 LICENSE AND COPYRIGHT
 

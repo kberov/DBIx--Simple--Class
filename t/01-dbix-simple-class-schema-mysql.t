@@ -16,9 +16,6 @@ BEGIN {
   use Cwd;
   use lib (Cwd::abs_path(dirname(__FILE__) . '/..') . '/examples/lib');
 }
-
-
-use DBI::Const::GetInfoType;
 use Data::Dumper;
 use_ok('DBIx::Simple::Class::Schema');
 
@@ -29,11 +26,31 @@ eval {
     $ENV{USER}, '', {mysql_enable_utf8 => 1});
 }
   or plan skip_all => (
-  $@ =~ /Can't connect to local/
+  $@ =~ /Can\'t connect to local/
   ? 'Please start MySQL on localhost to enable this test.'
   : $@
   );
 
+#=pod
+
+#Suppress some warnings from DBIx::Simple::Class during tests.
+local $SIG{__WARN__} = sub {
+  if (
+    $_[0] =~ /(Will\sdump\sschema\sat
+         |exists
+         |avoid\snamespace\scollisions
+         |\w+\.pm|make\spath)/x
+    )
+  {
+    my ($package, $filename, $line, $subroutine) = caller(2);
+    ok($_[0], $subroutine . " warns '$1' OK");
+  }
+  else {
+    warn $_[0];
+  }
+};
+
+#=cut
 
 isa_ok(ref($DSCS->dbix($dbix)), 'DBIx::Simple');
 can_ok($DSCS, qw(load_schema dump_schema_at));
@@ -73,28 +90,31 @@ CREATE TABLE  IF NOT EXISTS groups(
 
   ) DEFAULT CHARSET=utf8 COLLATE=utf8_bin
 TAB
+ok(my $code = $DSCS->load_schema(), 'scalar context OK');
+ok(my @code = $DSCS->load_schema(), 'list context OK');
 
+#warn Dumper($DSCS->_schemas('Test')->{tables});
+#Test namespace is occupied already
+ok(!$DSCS->dump_schema_at(), 'quits OK');
 
-my $tables = $DSCS->_get_table_info();
-$DSCS->_get_column_info($tables);
-$DSCS->_generate_PRIMARY_KEY_COLUMNS_ALIASES_CHECKS($tables);
-ok((grep { $_->{TABLE_NAME} eq 'users' || $_->{TABLE_NAME} eq 'groups' } @$tables),
-  '_get_table_info works');
-my @column_infos = (@{$tables->[0]->{column_info}}, @{$tables->[1]->{column_info}});
-is((grep { $_->{COLUMN_NAME} eq 'id' } @column_infos), 2, '_get_column_info works');
-my %alaiases = (%{$tables->[0]->{ALIASES}}, %{$tables->[1]->{ALIASES}});
-is((grep { $_ eq 'is_blocked' || $_ eq 'column_data' } values %alaiases),
-  2, '_generate_ALIASES works');
-TODO: {
-  local $TODO = "load_schema, dump_schema_at and dump_class_at  not finished";
+#PARAMS
+delete $DSCS->_schemas->{Test};
+$DSCS->load_schema(namespace => 'Your::Model', table => '%user%', type => "'TABLE'")
+  ;    #void context ok
+isa_ok($DSCS->_schemas('Your::Model'),
+  'HASH', 'load_schema creates Your::Model namespace OK');
 
-#warn Dumper($tables);
-#load_schema
-my $code = $DSCS->load_schema();
-ok((eval{$code}),'code generated ok') or diag($@);
-#dump_schema_at
-}
-
+#warn Dumper($DSCS->_schemas('Your::Model')->{tables});
+is($DSCS->_schemas('Your::Model')->{tables}[0]->{TABLE_NAME},
+  'users', 'first table is "users"');
+is(scalar @{$DSCS->_schemas('Your::Model')->{tables}}, 1, 'the only table is "users"');
+chmod 0444, $INC[0];
+ok(!$DSCS->dump_schema_at(lib_root => $INC[0]), 'quits OK');
+chmod 0755, $INC[0];
+ok($DSCS->dump_schema_at(lib_root => $INC[0]), 'dumps OK');
+File::Path::remove_tree($INC[0] . '/Your');
+$dbix->query('DROP TABLE IF EXISTS `groups`');
+$dbix->query('DROP TABLE IF EXISTS `users`');
 
 done_testing;
 
