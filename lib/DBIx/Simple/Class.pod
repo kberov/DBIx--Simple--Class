@@ -13,8 +13,13 @@ code more organized, clean and reliable
 (separation of concerns + input-validation).
 You will even get some more performance over plain DBIx::Simple
 while keeping its' sexy features when you need them. Last but not
-least, this module has no other non-CORE dependencies besides
+least, this module has no other non-CORE Perl 5.10.1 dependencies besides
 L<DBIx::Simple> and L<DBI>. See below for details.
+
+To easily generate entire classes and save them on disk for later usage
+and customization please use L<DBIx::Simple::Class::Schema> which comes
+with this distribution.
+
 
 =head1 SYNOPSIS
 
@@ -614,6 +619,10 @@ L<DBIx::Simple::Result::RowObject>, L<DBIx::Simple::OO>,
 L<Ima::DBI>, L<DBIx::Class>, L<Data::ObjectDriver>,L<Class::DBI>, 
 L<Class::DBI::Lite>
 L<https://github.com/kberov/MYDLjE>
+
+To easily generate entire classes and save them on disk for later usage
+and customization please use L<DBIx::Simple::Class::Schema> which comes
+with this distribution.
 
 
 =head1 LICENSE AND COPYRIGHT

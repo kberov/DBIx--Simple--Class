@@ -153,21 +153,21 @@ __PACKAGE__->QUOTE_IDENTIFIERS($t->{QUOTE_IDENTIFIERS});
 
 $package - A class for $t->{TABLE_TYPE} $t->{TABLE_NAME} in $t->{column_info}[0]{TABLE_SCHEM}
 
-|.qq|=head1 SYNOPSIS$/$/=head1 DESCRIPTION$/$/=head1 COLUMNS$/$/Each column in this class has an accessor.
+|.qq|=head1 SYNOPSIS$/$/=head1 DESCRIPTION$/$/=head1 COLUMNS$/
+Each column in this class has an accessor.
 |.qq|$/=head1 ALIASES$/$/=head1 GENERATOR$/$/L<${\(__PACKAGE__)}>$/$/=head1 SEE ALSO
 $/$/L<$namespace>,L<DBIx::Simple::Class>, L<${\(__PACKAGE__)}>
 |;
 
   }    # end foreach my $t (@$tables)
   if (defined wantarray) {
-    foreach (@{$schemas->{$namespace}{code}}) {
-      $code .= $_;
+    if(wantarray){
+      return @{$schemas->{$namespace}{code}};
+    }else{
+      return join '', @{$schemas->{$namespace}{code}};
     }
   }
-
-  #TODO wallk the structure and build code
-
-  return $code;
+  return;
 }
 
 sub load_schema {
@@ -242,7 +242,7 @@ sub dump_schema_at {
     return;
   }
 
-  File::Path::make_path($schema_path);
+  eval {File::Path::make_path($schema_path);}|| carp("$!.$/ Quitting...") && return;
   foreach my $i (0 .. @$tables - 1) {
     my $filename = ucfirst(lc($tables->[$i]{TABLE_NAME})) . '.pm';
     my $fh = IO::File->new("> $schema_path/$filename");
@@ -314,11 +314,17 @@ Class method.
       default: '%'
     type - String. "TABLE" or/and "VIEW" database obects
       default: "'TABLE','VIEW'"
+
 Extracts tables' information from the current connection and generates
 Perl classes representing those tabels or views.
-If not called in void context returns all the generated code.
+If called in list context returns an array with perl code for each package.
+The first package is the base class.
+If called in scalar context returns all the generated code as a string.
+In void context returns C<undefined>.
+The generated classes are saved internally and are available for use by
+L</dump_schema_at>.
 This makes it very convenient for quickly prototyping applications
-by just using tables in your database.
+by just modifying tables in your database.
 
   my $perl_code = DBIx::Simple::Class::Schema->load_schema();
   eval $perl_code || croak($@);
@@ -326,6 +332,63 @@ by just using tables in your database.
   my $user = Dbname::User->find(2345);
 
 =head2 dump_schema_at
+
+Class method.
+
+  Params:
+    lib_root: String - Where classes will be dumped.
+      default: $INC[0]
+    overwrite: boolean -1/0 Should it overwrite existing classes with the same name?
+      default: 0
+
+Uses the generated code by L</load_schema> and saves each class on the disk.
+Does several checks:
+
+=over
+
+=item 1
+
+Checks if a file with the name of your base class exists and exits
+if the flag C<overwrite> is not set.
+
+=item 2
+
+Checks if there is a module with the same name as your base class installed
+and exits if there is such module. This is done to avoid namespace collisions.
+
+=item 3
+
+Checks if the files can be written to disk and exit immediately if there is a problem.
+
+=back
+
+For every check above issues the system warning so you, the developer, can decide what to do.
+Returns true on success.
+
+=head1 SUPPORTED DATABASE DRIVERS
+
+DBIx::Simple::Class::Schema strives to be DBD agnostic and
+uses only functionality specified by L<DBI>.
+This means that if a driver implements the methods specifyed in L<DBI> it is supported.
+However currently only tests for L<DBD::SQLite> and L<DBD::mysql> are written.
+Feel free to contribute with tests for your prefered driver.
+The following methods are used to retreive information form the database:
+
+=over
+
+=item * L<DBI/table_info>
+
+=item * L<DBI/column_info>
+
+=item * L<DBI/primary_key_info>
+
+=back
+
+=head1 SUPPORTED SQL TYPES
+
+Currently some minimal L<DBIx::Simple::Class/CHECKS> are automatically generated for TYPE_NAMEs
+matching C</INT/i>,C</FLOAT|DOUBLE|DECIMAL/i>, C</CHAR|TEXT|CLOB/i>.
+You are supposed to write your own business-specific checks.
 
 
 

@@ -98,11 +98,6 @@ TODO: {
 #load_schema
 ok((eval{$code}),'code generated ok') or diag($@);
 $DSCS->dump_schema_at();
-#dump_schema_at
-
-#dump_schema_at
-
-#dump_class_at
 }
 
 
