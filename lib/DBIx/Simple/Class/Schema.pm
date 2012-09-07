@@ -5,7 +5,7 @@ use 5.10.1;
 use Carp;
 use parent 'DBIx::Simple::Class';
 use Data::Dumper;
-
+our $VERSION = '0.02';
 *_get_obj_args = \&DBIx::Simple::Class::_get_obj_args;
 
 #struct to keep schemas while building
@@ -111,12 +111,24 @@ sub _generate_CODE {
   $schemas->{$namespace}{code} = [];
 
   push @{$schemas->{$namespace}{code}}, <<"BASE_CLASS";
-package $namespace;
+package $namespace; #The schema/base class
+use 5.10.1;
 use strict;
 use warnings;
-use parent 'DBIx::Simple::Class';
+use utf8;
+use parent qw(DBIx::Simple::Class);
+
 our \$VERSION = '0.01';
 sub base_class{1}
+sub dbix {
+
+  # Singleton DBIx::Simple instance
+  state \$DBIx;
+  return (\$DBIx = \$_[1] ? \$_[1] : \$DBIx)
+    || croak('DBIx::Simple is not instantiated. Please first do '
+      . \$_[0]
+      . '->dbix(DBIx::Simple->connect(\$DSN,\$u,\$p,{...})');
+}
 1;
 BASE_CLASS
 
@@ -127,9 +139,11 @@ BASE_CLASS
     my $ALIASES = Data::Dumper->Dump([$t->{ALIASES}], ['$ALIASES']);
     my $CHECKS  = Data::Dumper->Dump([$t->{CHECKS}], ['$CHECKS']);
     my $TABLE   = Data::Dumper->Dump([$t->{TABLE_NAME}], ['$TABLE_NAME']);
-    push @{$schemas->{$namespace}{code}}, qq|package $package;
-| . qq|use strict;
+    push @{$schemas->{$namespace}{code}}, qq|package $package; #A table/row class
+use 5.10.1;
+use strict;
 use warnings;
+use utf8;
 use parent qw($namespace);
 | . qq|
 sub base_class{0}

@@ -207,6 +207,8 @@ to the current DBIx::Simple instance (with L<SQL::Abstract> support eventually :
 
 Copy/paste/override this method in your base classes
 if you need more instances/connections per application.
+This is already done for you if you used L<DBIx::Simple::Class::Schema> to generate
+your schema and table classes.
 
   My->dbix( DBIx::Simple->connect($bar_dsn) );
   Your->dbix( DBIx::Simple->connect($foo_dsn) );
