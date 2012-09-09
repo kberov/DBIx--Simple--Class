@@ -3,9 +3,10 @@ use strict;
 use warnings;
 use 5.10.1;
 use Carp;
-use parent 'DBIx::Simple::Class';
 use Data::Dumper;
-our $VERSION = '0.02';
+use parent 'DBIx::Simple::Class';
+
+our $VERSION = '0.03';
 *_get_obj_args = \&DBIx::Simple::Class::_get_obj_args;
 
 #struct to keep schemas while building
@@ -119,7 +120,7 @@ use utf8;
 use parent qw(DBIx::Simple::Class);
 
 our \$VERSION = '0.01';
-sub base_class{1}
+sub is_base_class{1}
 sub dbix {
 
   # Singleton DBIx::Simple instance
@@ -324,7 +325,7 @@ Class method.
 
   Params:
     namespace - String. The class name for your base class,
-      default: ucfirst(lc($databse))
+      default: ucfirst(lc($database))
     table - SQL string for a LIKE clause,
       default: '%'
     type - SQL String for an IN clause.
@@ -342,9 +343,16 @@ This makes it very convenient for quickly prototyping applications
 by just modifying tables in your database.
 
   my $perl_code = DBIx::Simple::Class::Schema->load_schema();
+  #concatenaded code as one string
   eval $perl_code || croak($@);
-  @...
+  #...
   my $user = Dbname::User->find(2345);
+  
+  #or My::Schema, My::Schema::Table1, My::Schema::Table2,...
+  my @perl_code = DBIx::Simple::Class::Schema->load_schema();
+  
+  #or just prepare code before dumping it to disk.
+  DBIx::Simple::Class::Schema->load_schema();
 
 =head2 dump_schema_at
 
