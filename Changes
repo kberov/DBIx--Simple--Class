@@ -1,9 +1,11 @@
 Revision history for DBIx::Simple::Class
 
-0.992   2012-09-07 19:52:26 EEST
+0.992   2012-09-12 23:03:46 EEST
         - Fixed typos in documentation
         - Fixed unnoticeable bug in the generated Schema Class
         - Slight improvements in documentation
+        - Prefixed default namespace with 'DSCS::'
+        to reduce possible namespace collision.
 
 0.991   2012-09-07 17:30:04 EEST
         - Fixed failing tests on windows related to chmod.

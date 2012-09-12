@@ -91,8 +91,9 @@ CREATE TABLE  IF NOT EXISTS groups(
 
   ) DEFAULT CHARSET=utf8 COLLATE=utf8_bin
 TAB
-ok(my $code = $DSCS->load_schema(), 'scalar context OK');
-ok(my @code = $DSCS->load_schema(), 'list context OK');
+ok(my $code = $DSCS->load_schema(namespace => 'Test'), 'scalar context OK');
+ok(my @code = $DSCS->load_schema(namespace => 'Test'), 'list context OK');
+warn Dumper($DSCS->_schemas('Test')->{tables}[0]);
 
 #warn Dumper($DSCS->_schemas('Test')->{tables});
 #Test namespace is occupied already

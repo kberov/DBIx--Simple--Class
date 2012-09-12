@@ -191,7 +191,7 @@ sub load_schema {
       $args->{namespace} = $2;
     }
     $args->{namespace} =~ s/\W//xg;
-    $args->{namespace} = ucfirst(lc($args->{namespace}));
+    $args->{namespace} = 'DSCS::' . ucfirst(lc($args->{namespace}));
   }
 
   my $tables = $class->_get_table_info($args);
@@ -325,7 +325,7 @@ Class method.
 
   Params:
     namespace - String. The class name for your base class,
-      default: ucfirst(lc($database))
+      default: 'DSCS::'.ucfirst(lc($database))
     table - SQL string for a LIKE clause,
       default: '%'
     type - SQL String for an IN clause.
