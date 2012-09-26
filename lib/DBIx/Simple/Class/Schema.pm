@@ -35,24 +35,30 @@ sub _get_table_info {
 
 sub _get_column_info {
   my ($class, $tables) = @_;
-  foreach my $table (@$tables) {
-    $table->{column_info} =
-      $class->dbh->column_info(undef, undef, $table->{TABLE_NAME}, '%')
+  my $dbh = $class->dbh;
+  foreach my $t (@$tables) {
+    $t->{column_info} =
+      $dbh->column_info(undef, undef, $t->{TABLE_NAME}, '%')
       ->fetchall_arrayref({});
+        #TODO support multi_column primary keys.see DSC::find()
+    $t->{PRIMARY_KEY} =
+      $dbh->primary_key_info(undef, undef, $t->{TABLE_NAME})
+      ->fetchall_arrayref({})->[0]->{COLUMN_NAME} || '';
+    #as child table
+    my $sth = $dbh->foreign_key_info(
+      undef, undef,   undef , undef, undef, $t->{TABLE_NAME}
+      );
+    $t->{FOREIGN_KEYS} = $sth->fetchall_arrayref({}) if $sth;
+
   }
   return $tables;
 }
 
 #generates COLUMNS and PRIMARY_KEY
-sub _generate_PRIMARY_KEY_COLUMNS_ALIASES_CHECKS {
+sub _generate_COLUMNS_ALIASES_CHECKS {
   my ($class, $tables) = @_;
 
   foreach my $t (@$tables) {
-
-    $t->{PRIMARY_KEY} =
-      $class->dbh->primary_key_info(undef, undef, $t->{TABLE_NAME})
-      ->fetchall_arrayref({})->[0]->{COLUMN_NAME} || '';
-
     $t->{COLUMNS}           = [];
     $t->{ALIASES}           = {};
     $t->{CHECKS}            = {};
@@ -196,11 +202,11 @@ sub load_schema {
 
   my $tables = $class->_get_table_info($args);
 
-  #get table columns
+  #get table columns, PRIMARY_KEY, foreign keys
   $class->_get_column_info($tables);
 
-  #generate COLUMNS, PRIMARY_KEY, ALIASES, CHECKS
-  $class->_generate_PRIMARY_KEY_COLUMNS_ALIASES_CHECKS($tables);
+  #generate COLUMNS, ALIASES, CHECKS
+  $class->_generate_COLUMNS_ALIASES_CHECKS($tables);
 
   #generate code
   if (defined wantarray) {
