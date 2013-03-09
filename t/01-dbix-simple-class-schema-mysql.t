@@ -82,6 +82,7 @@ CREATE TABLE IF NOT EXISTS `users` (
   `email` varchar(255) NOT NULL DEFAULT 'email@domain.com',
   `disabled` tinyint(1) NOT NULL DEFAULT '0',
   balance DECIMAL(8,2) NOT NULL DEFAULT '0.00',
+  dummy_dec DECIMAL(8,0) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
   UNIQUE KEY `login_name` (`login_name`),
   UNIQUE KEY `email` (`email`),
@@ -101,7 +102,7 @@ TAB
 
 ok(my $code = $DSCS->load_schema(namespace => 'Test'), 'scalar context OK');
 ok(my @code = $DSCS->load_schema(namespace => 'Test'), 'list context OK');
-
+#warn Dumper($DSCS->_schemas('Test')->{tables});
 #PARAMS
 delete $DSCS->_schemas->{Test};
 $DSCS->load_schema(namespace => 'Your::Model', table => '%user%', type => "'TABLE'")
@@ -109,7 +110,6 @@ $DSCS->load_schema(namespace => 'Your::Model', table => '%user%', type => "'TABL
 isa_ok($DSCS->_schemas('Your::Model'),
   'HASH', 'load_schema creates Your::Model namespace OK');
 
-#warn Dumper($DSCS->_schemas('Your::Model')->{tables});
 is($DSCS->_schemas('Your::Model')->{tables}[0]->{TABLE_NAME},
   'users', 'first table is "users"');
 is(scalar @{$DSCS->_schemas('Your::Model')->{tables}}, 1, 'the only table is "users"');

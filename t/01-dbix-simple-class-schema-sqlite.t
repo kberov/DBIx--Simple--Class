@@ -68,6 +68,7 @@ CREATE TABLE IF NOT EXISTS users (
   email varchar(255) NOT NULL DEFAULT 'email@domain.com',
   disabled tinyint(1) NOT NULL DEFAULT '0',
   balance DECIMAL(8,2) NOT NULL DEFAULT '0.00',
+  dummy_dec DECIMAL(8,0) NOT NULL DEFAULT '0',
   UNIQUE(login_name) ON CONFLICT ROLLBACK,
   UNIQUE(email) ON CONFLICT ROLLBACK,
   FOREIGN KEY(group_id) REFERENCES groups(id)
@@ -131,6 +132,8 @@ like('11.2',      $checks{balance}->{allow},     'checks DECIMAL(8,2) works fine
 like('123456.20', $checks{balance}->{allow},     'checks DECIMAL(8,2) works fine');
 unlike('1234567.2', $checks{balance}->{allow},     'checks DECIMAL(8,2) works fine');
 unlike('a',         qr/$checks{balance}->{allow}/, 'checks DECIMAL(8,2) works fine');
+like('11',      $checks{dummy_dec}->{allow},     'checks DECIMAL(8,0) works fine');
+unlike('11.2',      $checks{dummy_dec}->{allow},     'checks DECIMAL(8,0) works fine');
 ok((eval {$code}), 'code generated ok') or diag($@);
 ok($DSCS->dump_schema_at(), 'dump_schema_at dumps code to files OK');
 use_ok('DSCS::Memory::Groups');

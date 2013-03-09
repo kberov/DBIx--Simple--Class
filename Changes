@@ -1,5 +1,8 @@
 Revision history for DBIx::Simple::Class
 
+0.994   2013-03-09 21:03:36 EET
+        - Fix for odd but possible DECIMAL(8,0)
+
 0.993   2013-03-09 19:38:05 EET
         - Added method DBIx::Simple::Class::create().
         - Enhanced tests.

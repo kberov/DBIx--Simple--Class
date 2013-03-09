@@ -99,7 +99,7 @@ sub _generate_COLUMNS_ALIASES_CHECKS {
         my $scale     = $col->{DECIMAL_DIGITS};
         my $precision = $size - $scale;
         $t->{CHECKS}{$col->{COLUMN_NAME}}{allow} =
-          qr/^-?\d{1,$precision}(?:\.\d{1,$scale})?$/x;
+          qr/^-?\d{1,$precision}(?:\.\d{0,$scale})?$/x;
       }
       elsif ($col->{TYPE_NAME} =~ /CHAR|TEXT|CLOB/i) {
         $t->{CHECKS}{$col->{COLUMN_NAME}}{allow} = qr/^.{1,$size}$/x;
