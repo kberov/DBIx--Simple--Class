@@ -38,9 +38,11 @@ eval {
   $dbix = DBIx::Simple->connect('dbi:mysql:database=test;host=localhost',
     $ENV{USER}, '', {mysql_enable_utf8 => 1});
 }
-  or plan skip_all => ($@ =~ /Can't connect to local/
+  or plan skip_all => (
+  $@ =~ /Can't connect to local/
   ? 'Please start MySQL on localhost to enable this test.'
-  : $@);
+  : $@
+  );
 
 My->dbix($dbix);
 isa_ok(ref($DSC->dbix), 'DBIx::Simple');

@@ -6,10 +6,10 @@ use Carp;
 use Params::Check;
 use DBIx::Simple;
 
-our $VERSION = '0.991';
+our $VERSION = '0.993';
 
 
-#CONSTANTS
+#CONSTANTS                                     
 
 #defauld debug mode
 my $DEBUG = 0;
@@ -433,6 +433,11 @@ sub insert {
 
 }
 
+sub create {
+  my $self = shift->new(@_);
+  $self->insert;
+  return $self;
+}
 
 1;
 

@@ -391,6 +391,15 @@ If a row is found, puts it in L</data>.
     # Build your WHERE using an SQL::Abstract structure:
     my $user = MYDLjE::M::User->select(id => $user_id);
 
+=head2 create
+
+  my $note = MyNote->create(
+      title=>'My Title',
+      description =>'This is a great story.'
+    );
+
+Inserts a new record and returns the new object.
+
 =head2 select_by_pk
 
 Constructor. 
@@ -442,7 +451,10 @@ Used internally in L</save>. Can be used when you are sure your object is
 not present in the table. Returns the value of the object's L</PRIMARY_KEY>
 on success. See L<DBIx::Simple/last_insert_id>.
 
-    my $note = MyNote->new(title=>'My Title', description =>'This is a great story.');
+    my $note = MyNote->new(
+      title=>'My Title',
+      description =>'This is a great story.'
+    );
     #do something more...
     my $last_insert_id = $note->insert;
 

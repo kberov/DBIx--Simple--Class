@@ -60,6 +60,17 @@ can_ok($DSCS, qw(load_schema dump_schema_at));
 #create some tables
 #=pod
 
+$dbix->query('DROP TABLE IF EXISTS `groups`');
+$dbix->query(<<'TAB');
+CREATE TABLE  IF NOT EXISTS groups(
+  id INTEGER PRIMARY KEY AUTO_INCREMENT,
+  group_name VARCHAR(12),
+  `is blocked` INT,
+  data TEXT
+
+  ) DEFAULT CHARSET=utf8 COLLATE=utf8_bin
+TAB
+
 $dbix->query('DROP TABLE IF EXISTS `users`');
 $dbix->query(<<'TAB');
 CREATE TABLE IF NOT EXISTS `users` (
@@ -78,26 +89,18 @@ CREATE TABLE IF NOT EXISTS `users` (
 ) ENGINE=InnoDB  DEFAULT CHARSET=utf8 ROW_FORMAT=COMPACT COMMENT='This table stores the users'
 
 TAB
+$dbix->query(<<'TAB');
+--
+-- Constraints for table `users`
+--
+ALTER TABLE `users`
+  ADD CONSTRAINT `users_group_id` FOREIGN KEY (`group_id`) REFERENCES `users` (`id`)
+TAB
 
 #=cut
 
-$dbix->query('DROP TABLE IF EXISTS `groups`');
-$dbix->query(<<'TAB');
-CREATE TABLE  IF NOT EXISTS groups(
-  id INTEGER PRIMARY KEY AUTO_INCREMENT,
-  group_name VARCHAR(12),
-  `is blocked` INT,
-  data TEXT
-
-  ) DEFAULT CHARSET=utf8 COLLATE=utf8_bin
-TAB
 ok(my $code = $DSCS->load_schema(namespace => 'Test'), 'scalar context OK');
 ok(my @code = $DSCS->load_schema(namespace => 'Test'), 'list context OK');
-warn Dumper($DSCS->_schemas('Test')->{tables}[0]);
-
-#warn Dumper($DSCS->_schemas('Test')->{tables});
-#Test namespace is occupied already
-ok(!$DSCS->dump_schema_at(), 'quits OK');
 
 #PARAMS
 delete $DSCS->_schemas->{Test};

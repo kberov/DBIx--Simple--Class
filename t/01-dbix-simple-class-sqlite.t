@@ -260,6 +260,7 @@ is(
   'alias() updates ok2'
 );
 
+#select
 #test getting by primary key
 My::Collision->new(data => 'second id')->save;
 is(My::Collision->select_by_pk(2)->id, 2, 'select_by_pk ok');
@@ -271,7 +272,7 @@ is(My::Collision->find(2)->id, 2, 'find ok from $SQL_CACHE');
 #testing SQL
 my $site_group = My::Group->new(group_name => 'SiteUsers');
 is($site_group->save, 3, ' group ' . $site_group->group_name . ' created ok');
-
+is(My::Group->create(group_name => 'OtherUsers')->id, 4, 'create() ok');
 my $SCLASS = 'My::SiteUser';
 $SCLASS->CHECKS->{group_id}{default} = $site_group->id;
 $SCLASS->WHERE->{group_id} = $site_group->id;

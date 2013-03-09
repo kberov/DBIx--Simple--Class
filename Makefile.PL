@@ -1,4 +1,3 @@
-use 5.010;
 use strict;
 use warnings;
 use ExtUtils::MakeMaker;
@@ -18,7 +17,7 @@ WriteMakefile(
   },
   PREREQ_PM => {
     'Test::More'                => 0,
-    'DBIx::Simple'              => 1.33,
+    'DBIx::Simple'              => 1.35,
     'Params::Check'             => 0,
     'Carp'                      => 0,
     'Data::Dumper'              => 0,

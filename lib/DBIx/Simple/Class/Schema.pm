@@ -38,16 +38,16 @@ sub _get_column_info {
   my $dbh = $class->dbh;
   foreach my $t (@$tables) {
     $t->{column_info} =
-      $dbh->column_info(undef, undef, $t->{TABLE_NAME}, '%')
-      ->fetchall_arrayref({});
-        #TODO support multi_column primary keys.see DSC::find()
+      $dbh->column_info(undef, undef, $t->{TABLE_NAME}, '%')->fetchall_arrayref({});
+
+    #TODO support multi_column primary keys.see DSC::find()
     $t->{PRIMARY_KEY} =
-      $dbh->primary_key_info(undef, undef, $t->{TABLE_NAME})
-      ->fetchall_arrayref({})->[0]->{COLUMN_NAME} || '';
+      $dbh->primary_key_info(undef, undef, $t->{TABLE_NAME})->fetchall_arrayref({})->[0]
+      ->{COLUMN_NAME} || '';
+
     #as child table
-    my $sth = $dbh->foreign_key_info(
-      undef, undef,   undef , undef, undef, $t->{TABLE_NAME}
-      );
+    my $sth =
+      $dbh->foreign_key_info(undef, undef, undef, undef, undef, $t->{TABLE_NAME});
     $t->{FOREIGN_KEYS} = $sth->fetchall_arrayref({}) if $sth;
 
   }
@@ -136,6 +136,7 @@ sub dbix {
       . \$_[0]
       . '->dbix(DBIx::Simple->connect(\$DSN,\$u,\$p,{...})');
 }
+
 1;
 BASE_CLASS
 
@@ -237,14 +238,10 @@ sub dump_schema_at {
   @base_path = File::Spec->splitdir($args->{lib_root});
 
   $schema_path = File::Spec->catdir(@base_path, @namespace);
-  if ((-f "$schema_path.pm" || -d $schema_path) && !$args->{overwrite}) {
-    carp($schema_path . ' exists. Quitting...');
-    return;
-  }
+
   if (my $href = Module::Load::Conditional::check_install(module => $namespace)) {
-    carp( "$namespace found at $href->{file}.$/"
-        . "Please avoid namespace collisions. Quitting...");
-    return;
+    carp(
+      "$namespace found at $href->{file}.$/" . "Please avoid namespace collisions...");
   }
   carp('Will dump schema at ' . $args->{lib_root});
 
@@ -255,19 +252,22 @@ sub dump_schema_at {
     eval { File::Path::make_path($schema_path); }
       || carp("Can not make path $schema_path.$/$!. Quitting...") && return;
   }
-  my $base_fh = IO::File->new("> $schema_path.pm");
-  if (defined $base_fh) {
+
+  if ((!$args->{overwrite} && !-f "$schema_path.pm") || $args->{overwrite}) {
+    carp("Overwriting $schema_path.pm...") if $args->{overwrite} && $class->DEBUG;
+    my $base_fh = IO::File->new("> $schema_path.pm")
+      || croak("Could not open $schema_path.pm for writing" . $!);
     print $base_fh $code->[0];
     $base_fh->close;
   }
-  else {
-    carp("$schema_path.pm: $!. Quitting...");
-    return;
-  }
 
   foreach my $i (0 .. @$tables - 1) {
-    my $filename = ucfirst(lc($tables->[$i]{TABLE_NAME})) . '.pm';
-    my $fh       = IO::File->new("> $schema_path/$filename");
+    my $filename =
+      (join '', map { ucfirst lc } split /_/, $tables->[$i]{TABLE_NAME}) . '.pm';
+    next if (-f "$schema_path/$filename" && !$args->{overwrite});
+    carp("Overwriting $schema_path/$filename...")
+      if $args->{overwrite} && $class->DEBUG;
+    my $fh = IO::File->new("> $schema_path/$filename");
     if (defined $fh) {
       print $fh $code->[$i + 1];
       $fh->close;

@@ -1,5 +1,11 @@
 Revision history for DBIx::Simple::Class
 
+0.993   2013-03-09 19:38:05 EET
+        - Added method DBIx::Simple::Class::create().
+        - Enhanced tests.
+        - Enhanced DBIx::Simple::Class::Schema::dump_schema_at().
+        - Perltidyed.
+
 0.992   2012-09-12 23:03:46 EEST
         - Fixed typos in documentation
         - Fixed unnoticeable bug in the generated Schema Class
