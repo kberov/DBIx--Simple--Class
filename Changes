@@ -1,5 +1,8 @@
 Revision history for DBIx::Simple::Class
 
+0.995	2013-03-11 12:01 EET
+	- Fixed Failing test due to stupid expectations about hash key order. 
+
 0.994   2013-03-09 21:03:36 EET
         - Fix for odd but possible DECIMAL(8,0)
 
