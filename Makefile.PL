@@ -26,6 +26,16 @@ WriteMakefile(
     'File::Spec'                => 0,
     'IO::File'                  => 0,
   },
-  dist  => {COMPRESS => 'gzip -9f', SUFFIX => 'gz',},
+  META_MERGE   => {
+    requires  => {perl => '5.010001'},
+    resources => {
+      homepage    => 'https://github.com/kberov/DBIx--Simple--Class',
+      license     => 'http://www.opensource.org/licenses/artistic-license-2.0',
+      repository  => 'https://github.com/kberov/DBIx--Simple--Class',
+      bugtracker  => 'https://github.com/kberov/DBIx--Simple--Class/issues'
+    },
+    no_index => {directory => ['t']}
+  },
+  dist  => {COMPRESS => 'gzip -9f', SiiFIX => 'gz',},
   clean => {FILES    => 'DBIx-Simple-Class-*'},
 );
