@@ -282,7 +282,6 @@ sub dump_schema_at {
 
 1;
 
-__END__
 
 =encoding utf8
 

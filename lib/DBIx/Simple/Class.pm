@@ -6,10 +6,10 @@ use Carp;
 use Params::Check;
 use DBIx::Simple;
 
-our $VERSION = '0.994';
+our $VERSION = '0.995';
 
 
-#CONSTANTS                                     
+#CONSTANTS
 
 #defauld debug mode
 my $DEBUG = 0;
@@ -211,7 +211,6 @@ sub new {
 }
 
 sub new_from_dbix_simple {
-  $_attributes_made->{$_[0]} || $_[0]->BUILD();
   if (wantarray) {
     return (map { bless {data => $_, new_from_dbix_simple => 1}, $_[0]; }
         @{$_[1]->{st}->{sth}->fetchall_arrayref({})});
@@ -228,12 +227,14 @@ sub new_from_dbix_simple {
 
 sub select {
   my ($class, $where) = _get_obj_args(@_);
+  $_attributes_made->{$class} || $class->BUILD();
   $class->new_from_dbix_simple(
     $class->dbix->select($class->TABLE, $class->COLUMNS, {%{$class->WHERE}, %$where}));
 }
 
 sub query {
   my $class = shift;
+  $_attributes_made->{$class} || $class->BUILD();
   local $Carp::CarpLevel = $Carp::CarpLevel + 1;
   return $class->dbix->query(@_) if $class->is_base_class;
   $class->new_from_dbix_simple($class->dbix->query(@_));
@@ -241,6 +242,7 @@ sub query {
 
 sub select_by_pk {
   my ($class, $pk) = @_;
+  $_attributes_made->{$class} || $class->BUILD();
   return $class->new_from_dbix_simple(
     $class->dbix->query(
       $SQL_CACHE->{$class}{SELECT_BY_PK} || $class->SQL('SELECT_BY_PK'), $pk
