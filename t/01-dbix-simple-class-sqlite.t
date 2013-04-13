@@ -315,7 +315,7 @@ is(
 
 like(
   $SCLASS->SQL('SELECT'),
-  qr/SELECT.+FROM\s+users\sWHERE\sdisabled.+group_id='3'/x,
+  qr/WHERE\s(disabled='0'\sAND\sgroup_id='3'|group_id='3'\sAND\sdisabled='0')/x,
   'SELECT generated ok'
 );
 
