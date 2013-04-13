@@ -1,5 +1,6 @@
 Changes
 examples/.htaccess
+examples/dsc_dump_schema.pl
 examples/lib/My.pm
 examples/lib/My/App.pm
 examples/lib/My/Group.pm
@@ -11,7 +12,8 @@ lib/DBIx/Simple/Class.pm
 lib/DBIx/Simple/Class.pod
 lib/DBIx/Simple/Class/Schema.pm
 Makefile.PL
-MANIFEST			This list of files
+MANIFEST
+MANIFEST.SKIP
 README
 t/00-common.t
 t/01-dbix-simple-class-schema-mysql.t

@@ -96,7 +96,7 @@ sub _generate_COLUMNS_ALIASES_CHECKS {
         $t->{CHECKS}{$col->{COLUMN_NAME}}{allow} = qr/^-?\d{1,$size}$/x;
       }
       elsif ($col->{TYPE_NAME} =~ /FLOAT|DOUBLE|DECIMAL/i) {
-        my $scale     = $col->{DECIMAL_DIGITS};
+        my $scale     = $col->{DECIMAL_DIGITS}||0;
         my $precision = $size - $scale;
         $t->{CHECKS}{$col->{COLUMN_NAME}}{allow} =
           qr/^-?\d{1,$precision}(?:\.\d{0,$scale})?$/x;
@@ -131,7 +131,7 @@ sub dbix {
 
   # Singleton DBIx::Simple instance
   state \$DBIx;
-  return (\$DBIx = \$_[1] ? \$_[1] : \$DBIx)
+  return (\$_[1] ? (\$DBIx = \$_[1]) : \$DBIx)
     || croak('DBIx::Simple is not instantiated. Please first do '
       . \$_[0]
       . '->dbix(DBIx::Simple->connect(\$DSN,\$u,\$p,{...})');
@@ -142,7 +142,7 @@ BASE_CLASS
 
 
   foreach my $t (@$tables) {
-    my $package = $namespace . '::' . ucfirst(lc($t->{TABLE_NAME}));
+    my $package = $namespace . '::' .(join '', map { ucfirst lc } split /_/, $t->{TABLE_NAME});
     my $COLUMNS = Data::Dumper->Dump([$t->{COLUMNS}], ['$COLUMNS']);
     my $ALIASES = Data::Dumper->Dump([$t->{ALIASES}], ['$ALIASES']);
     my $CHECKS  = Data::Dumper->Dump([$t->{CHECKS}], ['$CHECKS']);
@@ -174,8 +174,9 @@ __PACKAGE__->QUOTE_IDENTIFIERS($t->{QUOTE_IDENTIFIERS});
 $package - A class for $t->{TABLE_TYPE} $t->{TABLE_NAME} in schema $t->{TABLE_SCHEM}
 
 | . qq|=head1 SYNOPSIS$/$/=head1 DESCRIPTION$/$/=head1 COLUMNS$/
-Each column in this class has an accessor.
-| . qq|$/=head1 ALIASES$/$/=head1 GENERATOR$/$/L<$class>$/$/=head1 SEE ALSO
+Each column from table C<$t->{TABLE_NAME}> has an accessor method in this class.
+| .(join '',map {$/.'=head2 '.$_.$/} @{$t->{COLUMNS}}
+). qq|$/=head1 ALIASES$/$/=head1 GENERATOR$/$/L<$class>$/$/=head1 SEE ALSO
 $/$/|
       . qq|L<$namespace>,L<DBIx::Simple::Class>, L<$class>|;
   }    # end foreach my $t (@$tables)
@@ -198,7 +199,7 @@ sub load_schema {
       $args->{namespace} = $2;
     }
     $args->{namespace} =~ s/\W//xg;
-    $args->{namespace} = 'DSCS::' . ucfirst(lc($args->{namespace}));
+    $args->{namespace} = 'DSCS::' . (join '', map { ucfirst lc } split /_/, $args->{namespace});
   }
 
   my $tables = $class->_get_table_info($args);
@@ -243,9 +244,9 @@ sub dump_schema_at {
     carp(
       "$namespace found at $href->{file}.$/" . "Please avoid namespace collisions...");
   }
-  carp('Will dump schema at ' . $args->{lib_root});
+  say('Will dump schema at ' . $args->{lib_root});
 
-  #We we should be able to continue safely now...
+  #We should be able to continue safely now...
   my $tables = $schemas->{$namespace}{tables};
   my $code   = $schemas->{$namespace}{code};
   if (!$args->{overwrite} && !-d $schema_path) {
@@ -330,7 +331,7 @@ Class method.
 
   Params:
     namespace - String. The class name for your base class,
-      default: 'DSCS::'.ucfirst(lc($database))
+      default: 'DSCS::'.(join '', map { ucfirst lc } split /_/, $database)
     table - SQL string for a LIKE clause,
       default: '%'
     type - SQL String for an IN clause.
@@ -421,14 +422,15 @@ You are supposed to write your own business-specific checks.
 
 =head1 SEE ALSO
 
-L<DBIx::Simple::Class>, L<DBIx::Simple>, L<DBIx::Class::Schema::Loader>
+L<DBIx::Simple::Class>, L<DBIx::Simple>, L<DBIx::Class::Schema::Loader>,
+L<Mojolicious::Plugin::DSC>
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright 2012 Красимир Беров (Krasimir Berov).
+Copyright 2012-2013 Красимир Беров (Krasimir Berov).
 
 This program is free software, you can redistribute it and/or modify it under
 the terms of the Artistic License version 2.0.
 
-See http://dev.perl.org/licenses/ for more information.
+See http://www.opensource.org/licenses/artistic-license-2.0 for more information.
 

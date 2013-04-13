@@ -6,7 +6,7 @@ use Carp;
 use Params::Check;
 use DBIx::Simple;
 
-our $VERSION = '0.995';
+our $VERSION = '0.996';
 
 
 #CONSTANTS

@@ -638,12 +638,14 @@ To easily generate entire classes and save them on disk for later usage
 and customization please use L<DBIx::Simple::Class::Schema> which comes
 with this distribution.
 
+To use the functionalities provided by this distribution
+in a L<Mojolicious> application try L<Mojolicious::Plugin::DSC>.
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright 2012 Красимир Беров (Krasimir Berov).
+Copyright 2012 - 2013 Красимир Беров (Krasimir Berov).
 
 This program is free software, you can redistribute it and/or modify it under
 the terms of the Artistic License version 2.0.
 
-See http://dev.perl.org/licenses/ for more information.
+See http://www.opensource.org/licenses/artistic-license-2.0 for more information.

@@ -1,4 +1,12 @@
 Revision history for DBIx::Simple::Class
+0.996   2013-04-13 23:41:53 EEST
+        - Added META_MERGE section to Makefile.PL
+        - Implemented dsc_dump_schema.pl as example for
+        dumping a schema from a database to Perl classes.
+        - Fixed small SQL DECIMAL_DIGITS bug in DBIx::Simple::Class::Schema.
+        - Added MANIFEST.SKIP
+        - Many small improvements in DBIx::Simple::Class::Schema.
+        - Fixed connection bug in mysql tests.
 
 0.995   2013-04-07 01:32:14 EEST
         - $class->BUILD() is called too late in case
