@@ -21,7 +21,6 @@ WriteMakefile(
     'Params::Check'             => 0,
     'Carp'                      => 0,
     'Data::Dumper'              => 0,
-    'Module::Load::Conditional' => 0,
     'File::Path'                => 2.07,
     'File::Spec'                => 0,
     'IO::File'                  => 0,

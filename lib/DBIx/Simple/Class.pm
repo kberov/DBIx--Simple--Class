@@ -6,7 +6,7 @@ use Carp;
 use Params::Check;
 use DBIx::Simple;
 
-our $VERSION = '0.996';
+our $VERSION = '0.997';
 
 
 #CONSTANTS
@@ -57,8 +57,7 @@ sub QUOTE_IDENTIFIERS {
 #Used to store unquoted identifirers as they were before quoting
 #See BUILD()
 sub _UNQUOTED {
-  my ($class) = shift;    #class
-  $class = ref $class if ref $class;
+  my $class = ref $_[0] || $_[0];    #class
   state $UNQUOTED = {};
   return $UNQUOTED->{$class} //= {};
 }
@@ -74,19 +73,22 @@ sub _SQL_CACHE {$SQL_CACHE}
 my $SQL = {};
 $SQL = {
   SELECT => sub {
-    my $class = shift;
-    return $SQL_CACHE->{$class}{SELECT} ||= do {
-      my $where = $class->WHERE;
+
+    #my $class = shift;
+    return $SQL_CACHE->{$_[0]}{SELECT} ||= do {
+      my $where = $_[0]->WHERE;
+      my $dbh   = $_[0]->dbix->dbh;
       'SELECT '
-        . join(',', @{$class->COLUMNS})
+        . join(',', @{$_[0]->COLUMNS})
         . ' FROM '
-        . $class->TABLE
+        . $_[0]->TABLE
         . (
         (keys %$where)
         ? ' WHERE '
-          . join(' AND ',
-          map { "$_=" . $class->dbix->dbh->quote($where->{$_}) }
-            keys %$where)
+          . join(
+          ' AND ', map { "$_=" . $dbh->quote($where->{$_}) }
+            keys %$where
+          )
         : ''
         );
       }
@@ -119,16 +121,17 @@ $SQL = {
       }
   },
   SELECT_BY_PK => sub {
-    my $class = $_[0];
+
+    #my $class = $_[0];
 
     #cache this query and return it
-    return $SQL_CACHE->{$class}{SELECT_BY_PK} ||= do {
+    return $SQL_CACHE->{$_[0]}{SELECT_BY_PK} ||= do {
       'SELECT '
-        . join(',', @{$class->COLUMNS})
+        . join(',', @{$_[0]->COLUMNS})
         . ' FROM '
-        . $class->TABLE
+        . $_[0]->TABLE
         . ' WHERE '
-        . $class->PRIMARY_KEY . '=?';
+        . $_[0]->PRIMARY_KEY . '=?';
     };
   },
 
@@ -188,7 +191,7 @@ sub dbix {
 
   # Singleton DBIx::Simple instance
   state $DBIx;
-  return ($DBIx = $_[1] ? $_[1] : $DBIx)
+  return ($_[1] ? ($DBIx = $_[1]) : $DBIx)
     || croak('DBIx::Simple is not instantiated. Please first do '
       . $_[0]
       . '->dbix(DBIx::Simple->connect($DSN,$u,$p,{...})');
@@ -345,9 +348,9 @@ SUB
 
 #conveninece for getting key/vaule arguments
 sub _get_args {
-  return ref($_[0]) ? shift() : (@_ % 2) ? shift() : {@_};
+  return ref($_[0]) ? $_[0] : (@_ % 2) ? $_[0] : {@_};
 }
-sub _get_obj_args { return (shift, _get_args(@_)); }
+sub _get_obj_args { return (shift, ref($_[0]) ? $_[0] : (@_ % 2) ? $_[0] : {@_}); }
 
 sub _check {
   my ($self, $key, $value) = @_;
@@ -421,13 +424,14 @@ sub insert {
   my ($self) = @_;
   my ($pk, $class) = ($self->PRIMARY_KEY, ref $self);
 
-  $self->dbh->prepare($SQL_CACHE->{$class}{INSERT} || $class->SQL('INSERT'))->execute(
+  $self->dbh->prepare_cached($SQL_CACHE->{$class}{INSERT} || $class->SQL('INSERT'))
+    ->execute(
     map {
 
       #set expected defaults
       $self->data($_)
     } @{$class->_UNQUOTED->{COLUMNS}}
-  );
+    );
 
   #user set the primary key already
   return $self->{data}{$pk}

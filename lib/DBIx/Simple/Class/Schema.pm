@@ -42,8 +42,8 @@ sub _get_column_info {
 
     #TODO support multi_column primary keys.see DSC::find()
     $t->{PRIMARY_KEY} =
-      $dbh->primary_key_info(undef, undef, $t->{TABLE_NAME})->fetchall_arrayref({})->[0]
-      ->{COLUMN_NAME} || '';
+      $dbh->primary_key_info(undef, undef, $t->{TABLE_NAME})->fetchall_arrayref({})
+      ->[0]->{COLUMN_NAME} || '';
 
     #as child table
     my $sth =
@@ -70,7 +70,7 @@ sub _generate_COLUMNS_ALIASES_CHECKS {
 
       #generate ALIASES
       if ($col->{COLUMN_NAME} =~ /\W/) {    #not A-z0-9_
-        $t->{QUOTE_IDENTIFIERS} = 1;
+        $t->{QUOTE_IDENTIFIERS} ||= 1;
         $t->{ALIASES}{$col->{COLUMN_NAME}} = $col->{COLUMN_NAME};
         $t->{ALIASES}{$col->{COLUMN_NAME}} =~ s/\W/_/g;    #foo-bar=>foo_bar
       }
@@ -96,7 +96,7 @@ sub _generate_COLUMNS_ALIASES_CHECKS {
         $t->{CHECKS}{$col->{COLUMN_NAME}}{allow} = qr/^-?\d{1,$size}$/x;
       }
       elsif ($col->{TYPE_NAME} =~ /FLOAT|DOUBLE|DECIMAL/i) {
-        my $scale     = $col->{DECIMAL_DIGITS}||0;
+        my $scale = $col->{DECIMAL_DIGITS} || 0;
         my $precision = $size - $scale;
         $t->{CHECKS}{$col->{COLUMN_NAME}}{allow} =
           qr/^-?\d{1,$precision}(?:\.\d{0,$scale})?$/x;
@@ -142,10 +142,11 @@ BASE_CLASS
 
 
   foreach my $t (@$tables) {
-    my $package = $namespace . '::' .(join '', map { ucfirst lc } split /_/, $t->{TABLE_NAME});
-    my $COLUMNS = Data::Dumper->Dump([$t->{COLUMNS}], ['$COLUMNS']);
-    my $ALIASES = Data::Dumper->Dump([$t->{ALIASES}], ['$ALIASES']);
-    my $CHECKS  = Data::Dumper->Dump([$t->{CHECKS}], ['$CHECKS']);
+    my $package =
+      $namespace . '::' . (join '', map { ucfirst lc } split /_/, $t->{TABLE_NAME});
+    my $COLUMNS = Data::Dumper->Dump([$t->{COLUMNS}],    ['$COLUMNS']);
+    my $ALIASES = Data::Dumper->Dump([$t->{ALIASES}],    ['$ALIASES']);
+    my $CHECKS  = Data::Dumper->Dump([$t->{CHECKS}],     ['$CHECKS']);
     my $TABLE   = Data::Dumper->Dump([$t->{TABLE_NAME}], ['$TABLE_NAME']);
     push @{$schemas->{$namespace}{code}}, qq|package $package; #A table/row class
 use 5.10.1;
@@ -175,8 +176,9 @@ $package - A class for $t->{TABLE_TYPE} $t->{TABLE_NAME} in schema $t->{TABLE_SC
 
 | . qq|=head1 SYNOPSIS$/$/=head1 DESCRIPTION$/$/=head1 COLUMNS$/
 Each column from table C<$t->{TABLE_NAME}> has an accessor method in this class.
-| .(join '',map {$/.'=head2 '.$_.$/} @{$t->{COLUMNS}}
-). qq|$/=head1 ALIASES$/$/=head1 GENERATOR$/$/L<$class>$/$/=head1 SEE ALSO
+|
+      . (join '', map { $/ . '=head2 ' . $_ . $/ } @{$t->{COLUMNS}})
+      . qq|$/=head1 ALIASES$/$/=head1 GENERATOR$/$/L<$class>$/$/=head1 SEE ALSO
 $/$/|
       . qq|L<$namespace>,L<DBIx::Simple::Class>, L<$class>|;
   }    # end foreach my $t (@$tables)
@@ -199,7 +201,8 @@ sub load_schema {
       $args->{namespace} = $2;
     }
     $args->{namespace} =~ s/\W//xg;
-    $args->{namespace} = 'DSCS::' . (join '', map { ucfirst lc } split /_/, $args->{namespace});
+    $args->{namespace} =
+      'DSCS::' . (join '', map { ucfirst lc } split /_/, $args->{namespace});
   }
 
   my $tables = $class->_get_table_info($args);
@@ -227,11 +230,10 @@ sub dump_schema_at {
   my ($namespace, @namespace, @base_path, $schema_path);
 
   #_generate_CODE() should be called by now
-  $namespace = (keys %$schemas)[0];    #we always have only one key
+  #we always have only one key
+  $namespace = (keys %$schemas)[0]
+    || Carp::croak('Please first call ' . __PACKAGE__ . '->load_schema()!');
 
-  $namespace || Carp::croak('Please first call ' . __PACKAGE__ . '->load_schema()!');
-
-  require Module::Load::Conditional;
   require File::Path;
   require File::Spec;
   require IO::File;
@@ -240,16 +242,17 @@ sub dump_schema_at {
 
   $schema_path = File::Spec->catdir(@base_path, @namespace);
 
-  if (my $href = Module::Load::Conditional::check_install(module => $namespace)) {
-    carp(
-      "$namespace found at $href->{file}.$/" . "Please avoid namespace collisions...");
+  if (eval "require $namespace") {
+    carp( "Module $namespace is already installed at "
+        . $INC{join('/', @namespace) . '.pm'}
+        . ". Please avoid namespace collisions...");
   }
   say('Will dump schema at ' . $args->{lib_root});
 
   #We should be able to continue safely now...
   my $tables = $schemas->{$namespace}{tables};
   my $code   = $schemas->{$namespace}{code};
-  if (!$args->{overwrite} && !-d $schema_path) {
+  if (!-d $schema_path) {
     eval { File::Path::make_path($schema_path); }
       || carp("Can not make path $schema_path.$/$!. Quitting...") && return;
   }
@@ -433,4 +436,6 @@ This program is free software, you can redistribute it and/or modify it under
 the terms of the Artistic License version 2.0.
 
 See http://www.opensource.org/licenses/artistic-license-2.0 for more information.
+
+=cut
 

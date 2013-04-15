@@ -1,4 +1,8 @@
 Revision history for DBIx::Simple::Class
+0.997 2013-04-16 01:26:35 EEST
+        - Micro optimizitaions.
+        - Removed dependency Module::Load::Conditional.
+
 0.996   2013-04-13 23:41:53 EEST
         - Added META_MERGE section to Makefile.PL
         - Implemented dsc_dump_schema.pl as example for
