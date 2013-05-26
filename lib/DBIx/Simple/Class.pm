@@ -6,7 +6,7 @@ use Carp;
 use Params::Check;
 use DBIx::Simple;
 
-our $VERSION = '0.997';
+our $VERSION = '0.998';
 
 
 #CONSTANTS
@@ -35,7 +35,7 @@ sub CHECKS {
 
 sub is_base_class {
   no strict 'refs';
-  return (__PACKAGE__ ~~ @{"$_[0]\::ISA"});
+  return scalar grep { __PACKAGE__ eq $_ } @{"$_[0]\::ISA"};
 }
 
 #default where
@@ -368,7 +368,7 @@ sub data {
   if (ref $args && keys %$args) {
     for my $field (keys %$args) {
       my $alias = $self->ALIASES->{$field} || $field;
-      unless ($field ~~ @{$self->_UNQUOTED->{COLUMNS}}) {
+      unless (grep { $field eq $_ } @{$self->_UNQUOTED->{COLUMNS}}) {
         Carp::cluck(
           "There is not such field $field in table " . $self->TABLE . '! Skipping...')
           if $DEBUG;
