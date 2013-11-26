@@ -138,6 +138,14 @@ sub dbix {
 }
 
 1;
+$/__END__$/$/=pod$/$/=encoding utf8$/$/=head1 NAME
+
+$namespace - the base schema class.
+
+=head1 DESCRIPTION
+
+This is the base class for using table records as plain Perl objects.
+The subclassses are:$/$/=over
 BASE_CLASS
 
 
@@ -148,6 +156,8 @@ BASE_CLASS
     my $ALIASES = Data::Dumper->Dump([$t->{ALIASES}],    ['$ALIASES']);
     my $CHECKS  = Data::Dumper->Dump([$t->{CHECKS}],     ['$CHECKS']);
     my $TABLE   = Data::Dumper->Dump([$t->{TABLE_NAME}], ['$TABLE_NAME']);
+    my $name_description = "A class for $t->{TABLE_TYPE} $t->{TABLE_NAME} in schema $t->{TABLE_SCHEM}";
+    $schemas->{$namespace}{code}[0] .=qq|$/=item L<$package> - $name_description$/|;
     push @{$schemas->{$namespace}{code}}, qq|package $package; #A table/row class
 use 5.10.1;
 use strict;
@@ -172,7 +182,7 @@ __PACKAGE__->QUOTE_IDENTIFIERS($t->{QUOTE_IDENTIFIERS});
 1;
 | . qq|$/__END__$/$/=pod$/$/=encoding utf8$/$/=head1 NAME
 
-$package - A class for $t->{TABLE_TYPE} $t->{TABLE_NAME} in schema $t->{TABLE_SCHEM}
+$name_description
 
 | . qq|=head1 SYNOPSIS$/$/=head1 DESCRIPTION$/$/=head1 COLUMNS$/
 Each column from table C<$t->{TABLE_NAME}> has an accessor method in this class.
@@ -180,8 +190,14 @@ Each column from table C<$t->{TABLE_NAME}> has an accessor method in this class.
       . (join '', map { $/ . '=head2 ' . $_ . $/ } @{$t->{COLUMNS}})
       . qq|$/=head1 ALIASES$/$/=head1 GENERATOR$/$/L<$class>$/$/=head1 SEE ALSO
 $/$/|
-      . qq|L<$namespace>,L<DBIx::Simple::Class>, L<$class>|;
+      . qq|L<$namespace>, L<DBIx::Simple::Class>, L<$class>|;
   }    # end foreach my $t (@$tables)
+
+  $schemas->{$namespace}{code}[0] .=qq|$/=back$/$/=head1 GENERATOR$/$/L<$class>
+$/$/=head1 SEE ALSO$/$/
+L<$class>, L<DBIx::Simple::Class>, L<DBIx::Simple>, L<Mojolicious::Plugin::DSC>
+$/=head1 LICENSE AND COPYRIGHT$/$/$ENV{USER}...$/$/=cut
+|;
   if (defined wantarray) {
     if (wantarray) {
       return @{$schemas->{$namespace}{code}};
