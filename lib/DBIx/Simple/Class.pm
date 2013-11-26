@@ -6,7 +6,7 @@ use Carp;
 use Params::Check;
 use DBIx::Simple;
 
-our $VERSION = '0.999';
+our $VERSION = '1.000';
 
 
 #CONSTANTS
@@ -289,17 +289,18 @@ sub BUILD {
         . '. Please define an \'alias\' for the column to be used as method.')
       if __PACKAGE__->can($alias);
     next if $class->can($alias);                          #careful: no redefine
-    $code = "use strict;$/use warnings;$/use utf8;$/" unless $code;
+    $code = "package $class; use strict;$/use warnings;$/use utf8;$/" unless $code;
     $code .= <<"SUB";
-sub $class\::$alias {
-  my (\$self,\$value) = \@_;
-  if(defined \$value){ #setting value
-  \$self->{data}{qq{$_}} = \$self->_check(qq{$_}=>\$value);
+sub $alias {
+  if(defined \$_[1]){ #setting value
+  \$_[0]->{data}{qq{$_}} = 
+    \$_[1] =~ \$_[0]->CHECKS->{qq{$_}}{allow} ? \$_[1]: Carp::croak("$_ is of invalid type");
+  #\$_[0]->_check(qq{$_}=>\$_[1]);
     #make it chainable
-    return \$self;
+    return \$_[0];
   }
-  \$self->{data}{qq{$_}}
-  //= \$self->CHECKS->{qq{$_}}{default}; #getting value
+  return \$_[0]->{data}{qq{$_}}
+  //= \$_[0]->CHECKS->{qq{$_}}{default}; #getting value
 }
 
 SUB

@@ -165,7 +165,7 @@ use warnings;
 use utf8;
 use parent qw($namespace);
 | . qq|
-sub base_class{0}
+sub is_base_class{0}
 my $TABLE
 sub TABLE { \$TABLE_NAME }| . qq|
 sub PRIMARY_KEY{'$t->{PRIMARY_KEY}'}
