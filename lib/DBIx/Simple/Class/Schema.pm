@@ -6,7 +6,6 @@ use Carp;
 use Data::Dumper;
 use parent 'DBIx::Simple::Class';
 
-our $VERSION = '0.03';
 *_get_obj_args = \&DBIx::Simple::Class::_get_obj_args;
 
 #struct to keep schemas while building
