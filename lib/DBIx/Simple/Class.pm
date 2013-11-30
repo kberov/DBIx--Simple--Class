@@ -1,12 +1,12 @@
 package DBIx::Simple::Class;
-use 5.10.1;
+use 5.010001;
 use strict;
 use warnings;
 use Carp;
 use Params::Check;
 use DBIx::Simple;
 
-our $VERSION = '1.000';
+our $VERSION = '1.001';
 
 
 #CONSTANTS
@@ -292,15 +292,29 @@ sub BUILD {
     $code = "package $class; use strict;$/use warnings;$/use utf8;$/" unless $code;
     $code .= <<"SUB";
 sub $alias {
-  if(defined \$_[1]){ #setting value
-  \$_[0]->{data}{qq{$_}} = 
-    \$_[1] =~ \$_[0]->CHECKS->{qq{$_}}{allow} ? \$_[1]: Carp::croak("$_ is of invalid type");
-  #\$_[0]->_check(qq{$_}=>\$_[1]);
+  my (\$s,\$v) = \@_;
+  if(defined \$v){ #setting value
+    #Not using Params::Check
+    my \$allow = (\$s->CHECKS->{qq{$_}}?\$s->CHECKS->{qq{$_}}{allow}:'')||'';
+    if(ref \$allow eq 'CODE'){
+     \$s->{data}{qq{$_}} = \$allow->(\$v) ? \$v : Carp::croak("$_ is of invalid type");
+    }
+    elsif(ref \$allow eq 'Regexp'){
+      \$s->{data}{qq{$_}} = 
+        \$v =~ \$allow ? \$v : Carp::croak("$_ is of invalid type");
+    }
+    elsif(\$allow && !ref \$allow){
+      \$s->{data}{qq{$_}} = 
+        \$v eq \$allow ? \$v : Carp::croak("$_ is of invalid type");
+    }
+    else{
+      \$s->{data}{qq{$_}} = \$v;
+    }
+    #\$s->_check(qq{$_}=>\$v);#Using Params::Check
     #make it chainable
-    return \$_[0];
+    return \$s;
   }
-  return \$_[0]->{data}{qq{$_}}
-  //= \$_[0]->CHECKS->{qq{$_}}{default}; #getting value
+  return \$s->{data}{qq{$_}} //= \$s->CHECKS->{qq{$_}}{default}; #getting value
 }
 
 SUB

@@ -1,7 +1,7 @@
 package DBIx::Simple::Class::Schema;
 use strict;
 use warnings;
-use 5.10.1;
+use 5.010001;
 use Carp;
 use Data::Dumper;
 use parent 'DBIx::Simple::Class';
@@ -118,14 +118,14 @@ sub _generate_CODE {
 
   push @{$schemas->{$namespace}{code}}, <<"BASE_CLASS";
 package $namespace; #The schema/base class
-use 5.10.1;
+use 5.010001;
 use strict;
 use warnings;
 use utf8;
 use parent qw(DBIx::Simple::Class);
 
 our \$VERSION = '0.01';
-sub is_base_class{1}
+sub is_base_class{return 1}
 sub dbix {
 
   # Singleton DBIx::Simple instance
@@ -137,11 +137,8 @@ sub dbix {
 }
 
 1;
-$/__END__$/$/=pod$/$/=encoding utf8$/$/=head1 NAME
-
-$namespace - the base schema class.
-
-=head1 DESCRIPTION
+$/__END__$/$/=pod$/$/=encoding utf8$/$/=head1 NAME$/$/$namespace - the base schema class.
+$/=head1 DESCRIPTION
 
 This is the base class for using table records as plain Perl objects.
 The subclassses are:$/$/=over
@@ -158,30 +155,28 @@ BASE_CLASS
     my $name_description = "A class for $t->{TABLE_TYPE} $t->{TABLE_NAME} in schema $t->{TABLE_SCHEM}";
     $schemas->{$namespace}{code}[0] .=qq|$/=item L<$package> - $name_description$/|;
     push @{$schemas->{$namespace}{code}}, qq|package $package; #A table/row class
-use 5.10.1;
+use 5.010001;
 use strict;
 use warnings;
 use utf8;
 use parent qw($namespace);
 | . qq|
-sub is_base_class{0}
+sub is_base_class{return 0}
 my $TABLE
-sub TABLE { \$TABLE_NAME }| . qq|
-sub PRIMARY_KEY{'$t->{PRIMARY_KEY}'}
+sub TABLE {return \$TABLE_NAME}| . qq|
+sub PRIMARY_KEY{return '$t->{PRIMARY_KEY}'}
 my $COLUMNS
-sub COLUMNS { \$COLUMNS }
+sub COLUMNS {return \$COLUMNS}
 my $ALIASES
-sub ALIASES { \$ALIASES }
+sub ALIASES {return \$ALIASES}
 my $CHECKS
-sub CHECKS { \$CHECKS }
+sub CHECKS {return \$CHECKS}
 
 __PACKAGE__->QUOTE_IDENTIFIERS($t->{QUOTE_IDENTIFIERS});
 #__PACKAGE__->BUILD;#build accessors during load
 
 1;
-| . qq|$/__END__$/$/=pod$/$/=encoding utf8$/$/=head1 NAME
-
-$name_description
+| . qq|$/__END__$/$/=pod$/$/=encoding utf8$/$/=head1 NAME$/$/$name_description
 
 | . qq|=head1 SYNOPSIS$/$/=head1 DESCRIPTION$/$/=head1 COLUMNS$/
 Each column from table C<$t->{TABLE_NAME}> has an accessor method in this class.
