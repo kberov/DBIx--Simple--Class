@@ -6,7 +6,7 @@ use Carp;
 use Data::Dumper;
 use parent 'DBIx::Simple::Class';
 
-our $VERSION = '004';
+our $VERSION = '0.005';
 
 
 *_get_obj_args = \&DBIx::Simple::Class::_get_obj_args;
@@ -140,7 +140,7 @@ sub dbix {
 }
 
 1;
-$/__END__$/$/=pod$/$/=encoding utf8$/$/=head1 NAME$/$/$namespace - the base schema class.
+$/$/=pod$/$/=encoding utf8$/$/=head1 NAME$/$/$namespace - the base schema class.
 $/=head1 DESCRIPTION
 
 This is the base class for using table records as plain Perl objects.
@@ -179,7 +179,7 @@ __PACKAGE__->QUOTE_IDENTIFIERS($t->{QUOTE_IDENTIFIERS});
 #__PACKAGE__->BUILD;#build accessors during load
 
 1;
-| . qq|$/__END__$/$/=pod$/$/=encoding utf8$/$/=head1 NAME$/$/$name_description
+| . qq|$/=pod$/$/=encoding utf8$/$/=head1 NAME$/$/$name_description
 
 | . qq|=head1 SYNOPSIS$/$/=head1 DESCRIPTION$/$/=head1 COLUMNS$/
 Each column from table C<$t->{TABLE_NAME}> has an accessor method in this class.

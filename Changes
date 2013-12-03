@@ -1,5 +1,9 @@
 Revision history for DBIx::Simple::Class
 
+1.004 2013-12-03 23:29:29 CET
+        - No __END__ markers in generated code.
+
+
 1.003 2013-12-03 22:20:41 CET
         - Be more strict on using list and scalar context.
         - Got back $VERSION in DBIx::Simple::Class::Schema
