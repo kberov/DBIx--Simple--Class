@@ -6,6 +6,9 @@ use Carp;
 use Data::Dumper;
 use parent 'DBIx::Simple::Class';
 
+our $VERSION = '004';
+
+
 *_get_obj_args = \&DBIx::Simple::Class::_get_obj_args;
 
 #struct to keep schemas while building
@@ -20,7 +23,7 @@ sub _schemas {
 sub _get_table_info {
   my ($class, $args) = _get_obj_args(@_);
 
-  $args->{namespace} || croak('Please pass "namespace" argument');
+  $args->{namespace} || Carp::croak('Please pass "namespace" argument');
 
   #get tables from the current database
   #see https://metacpan.org/module/DBI#table_info
@@ -131,7 +134,7 @@ sub dbix {
   # Singleton DBIx::Simple instance
   state \$DBIx;
   return (\$_[1] ? (\$DBIx = \$_[1]) : \$DBIx)
-    || croak('DBIx::Simple is not instantiated. Please first do '
+    || Carp::croak('DBIx::Simple is not instantiated. Please first do '
       . \$_[0]
       . '->dbix(DBIx::Simple->connect(\$DSN,\$u,\$p,{...})');
 }
@@ -224,13 +227,10 @@ sub load_schema {
   $class->_generate_COLUMNS_ALIASES_CHECKS($tables);
 
   #generate code
-  if (defined wantarray) {
-    return $class->_generate_CODE($args);
+  if (wantarray) {
+    return ($class->_generate_CODE($args));
   }
-  else {
-    $class->_generate_CODE($args);
-  }
-  return;
+  return $class->_generate_CODE($args);
 }
 
 
@@ -270,7 +270,7 @@ sub dump_schema_at {
   if ((!$args->{overwrite} && !-f "$schema_path.pm") || $args->{overwrite}) {
     carp("Overwriting $schema_path.pm...") if $args->{overwrite} && $class->DEBUG;
     my $base_fh = IO::File->new("> $schema_path.pm")
-      || croak("Could not open $schema_path.pm for writing" . $!);
+      || Carp::croak("Could not open $schema_path.pm for writing" . $!);
     print $base_fh $code->[0];
     $base_fh->close;
   }
@@ -305,7 +305,7 @@ DBIx::Simple::Class::Schema - Create and use classes representing tables from a 
 
 =head1 SYNOPSIS
 
-  #Somewhere in a utility script or startup() fo your application.
+  #Somewhere in a utility script or startup() of your application.
   DBIx::Simple::Class::Schema->dbix(DBIx::Simple->connect(...));
   my $perl_code = DBIx::Simple::Class::Schema->load_schema(
     namespace =>'My::Model',
@@ -314,7 +314,7 @@ DBIx::Simple::Class::Schema - Create and use classes representing tables from a 
   );
 
   #Now eval() to use your classes.
-  eval $perl_code || croak($@);
+  eval $perl_code || Carp::croak($@);
 
 
   #Or load and save it for more customisations and later usage.
@@ -363,7 +363,7 @@ by just modifying tables in your database.
 
   my $perl_code = DBIx::Simple::Class::Schema->load_schema();
   #concatenaded code as one string
-  eval $perl_code || croak($@);
+  eval $perl_code || Carp::croak($@);
   #...
   my $user = Dbname::User->find(2345);
   

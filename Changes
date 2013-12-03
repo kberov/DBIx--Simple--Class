@@ -1,5 +1,13 @@
 Revision history for DBIx::Simple::Class
 
+1.003 2013-12-03 22:20:41 CET
+        - Be more strict on using list and scalar context.
+        - Got back $VERSION in DBIx::Simple::Class::Schema
+        so it is indexed by PAUSE.
+
+1.002 2013-12-01 00:38:33 CET
+        - Calling explicitely Carp::croak().
+
 1.001 2013-11-30 10:41:15 CET
         - Using a real number for perl versions.
 

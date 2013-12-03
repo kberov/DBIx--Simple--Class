@@ -6,7 +6,7 @@ use Carp;
 use Params::Check;
 use DBIx::Simple;
 
-our $VERSION = '1.001';
+our $VERSION = '1.003';
 
 
 #CONSTANTS
@@ -314,6 +314,7 @@ sub $alias {
     #make it chainable
     return \$s;
   }
+  #getting value
   return \$s->{data}{qq{$_}} //= \$s->CHECKS->{qq{$_}}{default}; #getting value
 }
 
