@@ -1,11 +1,9 @@
 #!perl
-
 use 5.10.1;
 use strict;
 use warnings;
 use utf8;
 use Test::More;
-
 
 BEGIN {
   eval { require DBD::SQLite; 1 }
@@ -43,6 +41,7 @@ use DBIx::Simple::Class::Schema;
 
 my $DSCS = 'DBIx::Simple::Class::Schema';
 my $dbix = DBIx::Simple->connect('dbi:SQLite:dbname=:memory:', {sqlite_unicode => 1});
+$dbix->dbh->do('PRAGMA foreign_keys = ON');
 isa_ok(ref($DSCS->dbix($dbix)), 'DBIx::Simple');
 can_ok($DSCS, qw(load_schema dump_schema_at));
 
@@ -69,6 +68,7 @@ CREATE TABLE IF NOT EXISTS users (
   disabled tinyint(1) NOT NULL DEFAULT '0',
   balance DECIMAL(8,2) NOT NULL DEFAULT '0.00',
   dummy_dec DECIMAL(8,0) NOT NULL DEFAULT '0',
+  nullable_column TEXT DEFAULT NULL,
   UNIQUE(login_name) ON CONFLICT ROLLBACK,
   UNIQUE(email) ON CONFLICT ROLLBACK,
   FOREIGN KEY(group_id) REFERENCES groups(id)
@@ -103,7 +103,7 @@ foreach (@$tables) {
   push @column_infos, @{$_->{column_info}};
 }
 
-#we have two columns named "id"
+#we have two columns named "id" - one per table.
 is((grep { $_->{COLUMN_NAME} eq 'id' } @column_infos), 2, '_get_column_info works');
 my %alaiases =
   (%{$tables->[0]->{ALIASES}}, %{$tables->[1]->{ALIASES}}, %{$tables->[2]->{ALIASES}});
@@ -112,18 +112,14 @@ is((grep { $_ eq 'is_blocked' || $_ eq 'column_data' } values %alaiases),
 
 my %checks =
   (%{$tables->[0]->{CHECKS}}, %{$tables->[1]->{CHECKS}}, %{$tables->[2]->{CHECKS}});
-like('alaba_anica2', qr/$checks{group_name}->{allow}/, 'checks VARCHAR(12) works fine');
-unlike(
-  'alaba_anica13',
-  qr/$checks{group_name}->{allow}/,
-  'checks VARCHAR(12) works fine'
-);
+ok($checks{group_name}{allow}('alaba_anica2'), 'checks VARCHAR(12) works fine');
+ok(!$checks{group_name}{allow}('alaba_anica13'), 'checks VARCHAR(12) works fine');
 like('1',  qr/$checks{id}->{allow}/, 'checks INT works fine');
 like('11', qr/$checks{id}->{allow}/, 'checks INT works fine');
 unlike('a', qr/$checks{id}->{allow}/, 'checks INT works fine');
-like('1',          qr/$checks{data}->{allow}/, 'checks TEXT works fine');
-like('11sd,asd,a', qr/$checks{data}->{allow}/, 'checks TEXT works fine');
-unlike('', qr/$checks{'is blocked'}->{allow}/, 'checks TEXT works fine');
+ok($checks{data}{allow}('1'), 'checks TEXT works fine');
+ok($checks{data}{allow}('11sd,asd,a'), 'checks TEXT works fine');
+unlike('', qr/$checks{'is blocked'}{allow}/, 'checks INT works fine');
 like('1', qr/$checks{disabled}->{allow}/, 'checks TINYINT(1) works fine');
 unlike('11', qr/$checks{disabled}->{allow}/, 'checks TINYINT(1) works fine');
 unlike('a',  qr/$checks{disabled}->{allow}/, 'checks TINYINT(1) works fine');
@@ -134,6 +130,11 @@ unlike('1234567.2', $checks{balance}->{allow},     'checks DECIMAL(8,2) works fi
 unlike('a',         qr/$checks{balance}->{allow}/, 'checks DECIMAL(8,2) works fine');
 like('11',      $checks{dummy_dec}->{allow},     'checks DECIMAL(8,0) works fine');
 unlike('11.2',      $checks{dummy_dec}->{allow},     'checks DECIMAL(8,0) works fine');
+
+my $nc ='nullable_column';
+is(undef, Params::Check::check({$nc => $checks{$nc}}, {$nc => undef})->{$nc},
+  'checks TEXT DEFAULT NULL works fine');
+
 ok((eval {$code}), 'code generated ok') or diag($@);
 ok($DSCS->dump_schema_at(), 'dump_schema_at dumps code to files OK');
 use_ok('DSCS::Memory::Groups');

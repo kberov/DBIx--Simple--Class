@@ -85,7 +85,7 @@ sub _generate_COLUMNS_ALIASES_CHECKS {
         $t->{CHECKS}{$col->{COLUMN_NAME}}{required} = 1;
         $t->{CHECKS}{$col->{COLUMN_NAME}}{defined}  = 1;
       }
-      if ($col->{COLUMN_DEF}) {
+      if ($col->{COLUMN_DEF} && $col->{COLUMN_DEF} !~/NULL/i) {
         my $default = $col->{COLUMN_DEF};
         $default =~ s|\'||g;
         $t->{CHECKS}{$col->{COLUMN_NAME}}{default} = $default;
@@ -104,7 +104,7 @@ sub _generate_COLUMNS_ALIASES_CHECKS {
           qr/^-?\d{1,$precision}(?:\.\d{0,$scale})?$/x;
       }
       elsif ($col->{TYPE_NAME} =~ /CHAR|TEXT|CLOB/i) {
-        $t->{CHECKS}{$col->{COLUMN_NAME}}{allow} = qr/^.{1,$size}$/x;
+        $t->{CHECKS}{$col->{COLUMN_NAME}}{allow} = sub{($_[0]=~/^.{1,$size}$/x) || ($_[0] eq'')}
       }
     }    #end foreach @{$t->{column_info}
   }    #end foreach $tables
@@ -185,15 +185,16 @@ __PACKAGE__->QUOTE_IDENTIFIERS($t->{QUOTE_IDENTIFIERS});
 Each column from table C<$t->{TABLE_NAME}> has an accessor method in this class.
 |
       . (join '', map { $/ . '=head2 ' . $_ . $/ } @{$t->{COLUMNS}})
-      . qq|$/=head1 ALIASES$/$/=head1 GENERATOR$/$/L<$class>$/$/=head1 SEE ALSO
-$/$/|
-      . qq|L<$namespace>, L<DBIx::Simple::Class>, L<$class>|;
+      . qq|$/=head1 ALIASES$/$/=head1 GENERATOR$/$/L<$class>$/$/=head1 SEE ALSO$/|
+      . qq|L<$namespace>, L<DBIx::Simple::Class>, L<$class>
+$/=head1 AUTHOR$/$/$ENV{USER}$/$/=cut
+|;
   }    # end foreach my $t (@$tables)
 
   $schemas->{$namespace}{code}[0] .=qq|$/=back$/$/=head1 GENERATOR$/$/L<$class>
 $/$/=head1 SEE ALSO$/$/
 L<$class>, L<DBIx::Simple::Class>, L<DBIx::Simple>, L<Mojolicious::Plugin::DSC>
-$/=head1 LICENSE AND COPYRIGHT$/$/$ENV{USER}...$/$/=cut
+$/=head1 AUTHOR$/$/$ENV{USER}$/$/=cut
 |;
   if (defined wantarray) {
     if (wantarray) {

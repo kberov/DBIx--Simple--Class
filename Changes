@@ -1,5 +1,9 @@
 Revision history for DBIx::Simple::Class
 
+1.005 2013-12-29 15:23:18 CET
+        - Fixed bug in CHECKS code generation default value.
+        - Added "--table" option for dsc_dump_schema.pl
+
 1.004 2013-12-03 23:29:29 CET
         - No __END__ markers in generated code.
 
