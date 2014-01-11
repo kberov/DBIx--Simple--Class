@@ -85,7 +85,7 @@ sub _generate_COLUMNS_ALIASES_CHECKS {
         $t->{CHECKS}{$col->{COLUMN_NAME}}{required} = 1;
         $t->{CHECKS}{$col->{COLUMN_NAME}}{defined}  = 1;
       }
-      if ($col->{COLUMN_DEF} && $col->{COLUMN_DEF} !~/NULL/i) {
+      if ($col->{COLUMN_DEF} && $col->{COLUMN_DEF} !~ /NULL/i) {
         my $default = $col->{COLUMN_DEF};
         $default =~ s|\'||g;
         $t->{CHECKS}{$col->{COLUMN_NAME}}{default} = $default;
@@ -104,7 +104,8 @@ sub _generate_COLUMNS_ALIASES_CHECKS {
           qr/^-?\d{1,$precision}(?:\.\d{0,$scale})?$/x;
       }
       elsif ($col->{TYPE_NAME} =~ /CHAR|TEXT|CLOB/i) {
-        $t->{CHECKS}{$col->{COLUMN_NAME}}{allow} = sub{($_[0]=~/^.{1,$size}$/x) || ($_[0] eq'')}
+        $t->{CHECKS}{$col->{COLUMN_NAME}}{allow} =
+          sub { ($_[0] =~ /^.{1,$size}$/x) || ($_[0] eq '') }
       }
     }    #end foreach @{$t->{column_info}
   }    #end foreach $tables
@@ -155,8 +156,9 @@ BASE_CLASS
     my $ALIASES = Data::Dumper->Dump([$t->{ALIASES}],    ['$ALIASES']);
     my $CHECKS  = Data::Dumper->Dump([$t->{CHECKS}],     ['$CHECKS']);
     my $TABLE   = Data::Dumper->Dump([$t->{TABLE_NAME}], ['$TABLE_NAME']);
-    my $name_description = "A class for $t->{TABLE_TYPE} $t->{TABLE_NAME} in schema $t->{TABLE_SCHEM}";
-    $schemas->{$namespace}{code}[0] .=qq|$/=item L<$package> - $name_description$/|;
+    my $name_description =
+      "A class for $t->{TABLE_TYPE} $t->{TABLE_NAME} in schema $t->{TABLE_SCHEM}";
+    $schemas->{$namespace}{code}[0] .= qq|$/=item L<$package> - $name_description$/|;
     push @{$schemas->{$namespace}{code}}, qq|package $package; #A table/row class
 use 5.010001;
 use strict;
@@ -191,7 +193,7 @@ $/=head1 AUTHOR$/$/$ENV{USER}$/$/=cut
 |;
   }    # end foreach my $t (@$tables)
 
-  $schemas->{$namespace}{code}[0] .=qq|$/=back$/$/=head1 GENERATOR$/$/L<$class>
+  $schemas->{$namespace}{code}[0] .= qq|$/=back$/$/=head1 GENERATOR$/$/L<$class>
 $/$/=head1 SEE ALSO$/$/
 L<$class>, L<DBIx::Simple::Class>, L<DBIx::Simple>, L<Mojolicious::Plugin::DSC>
 $/=head1 AUTHOR$/$/$ENV{USER}$/$/=cut
