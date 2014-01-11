@@ -13,6 +13,7 @@ GetOptions(
   'u|user=s'        => \my $user,
   'p|password=s'    => \my $password,
   'l|lib_root=s'       => \my $lib,
+  't|table' =>\my $table,
 );
 pod2usage(verbose=>2) if $help;
 pod2usage(1) unless $dsn;
@@ -46,8 +47,12 @@ dsc_dump_schema.pl - script to dump a schema from a database
 
 =head1 SYNOPSIS
 
+  #dump all tables
   dsc_dump_schema.pl --dsn DBI:mysql:database=mydb;host=127.0.0.1;mysql_enable_utf8=1 \
   -u me -p mypassword --overwrite 1 --lib_root ./lib
+
+  #dump only the "users" table - using short options and choosing a namespace
+  dsc_dump_schema.pl -dsn dbi:SQLite:database=etc/ado.sqlite -n Ado::Model -l lib -t users
   
   dsc_dump_schema.pl -? #for more help
   
@@ -56,8 +61,9 @@ dsc_dump_schema.pl - script to dump a schema from a database
 This is a helper script to dump L<DBIx::Simple::Class> based classes from
 an existing database. Currently it is known to work with mysql and SQLite databases.
 
-You can then edit those classes, add methods and customise the checks for the accepted table fields inn each of the dumped classes. Later you can
-also use these classes ASIS to access and update table rows in an object oriented fashion.
+You can then edit those classes, add methods and customise the checks for the accepted 
+table fields in each of the dumped classes. You can also use these classes ASIS to 
+access and update table rows in an object oriented fashion.
 
 =head1 OPTIONS
 
@@ -103,6 +109,17 @@ filesystem they will be ovwerwritten.
 Directory path in which the classes will be dumped. The directory must exist.
 It will not be created.
 
+=head2 --table|-t
+
+This option allows you to specify a table name. In some cases after modifying 
+some table you may need to dump a class only for this table.
+
+  #only table users
+  -t users
+
+  #all tables starting with "shop"
+  -t shop%
+
 =head1 SEE ALSO
 
 L<DBIx::Simple::Class>, L<DBIx::Simple>, 
@@ -119,6 +136,3 @@ the terms of the Artistic License version 2.0.
 See http://www.opensource.org/licenses/artistic-license-2.0 for more information.
 
 =cut
-
-
-

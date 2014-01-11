@@ -1,4 +1,5 @@
 /examples/db.sqlite
+examples/lib/DSCS
 Makefile
 *.komodoproject
 MYMETA.*
