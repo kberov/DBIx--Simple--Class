@@ -1,5 +1,8 @@
 Revision history for DBIx::Simple::Class
 
+1.006 2014-01-12 01:04:11 CET
+        - Fixed wrong documentation for select_by_pk().
+
 1.005 2013-12-29 15:23:18 CET
         - Fixed bug in CHECKS code generation default value.
         - Added "--table" option for dsc_dump_schema.pl

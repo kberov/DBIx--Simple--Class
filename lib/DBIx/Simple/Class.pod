@@ -316,6 +316,7 @@ See L<DBIx::Simple/Advanced_object_construction>.
   my $admin = $class->select(id=>123});#see below
   
   My::User->query('SELECT * FROM users WHERE id=?',22)->login_name;
+
   #The above is about 3 times faster than this below
   $dbix->query('SELECT * FROM users WHERE id=?',2)
             ->object(':RowObject')->login_name;
@@ -404,9 +405,14 @@ Inserts a new record and returns the new object.
 
 Constructor. 
 Retrieves  a row from the L</TABLE> by L</PRIMARY_KEY>. 
-Returns an instance of your class on success or C<undef> otherwise.
+Returns an instance of your class. 
+If the underlying database query was not succesfull L</data> will return undef.
 
     my $user = My::User->select_by_pk(1234);
+    unless($user->data){
+      $user->data(name=>'Fred Flintstone', username=>'fred' );
+      my $id = $user->insert();
+    }
 
 =head2 find 
 
