@@ -6,7 +6,7 @@ use Carp;
 use Data::Dumper;
 use parent 'DBIx::Simple::Class';
 
-our $VERSION = '0.005';
+our $VERSION = '0.006';
 
 
 *_get_obj_args = \&DBIx::Simple::Class::_get_obj_args;
@@ -112,6 +112,11 @@ sub _generate_COLUMNS_ALIASES_CHECKS {
   return $tables;
 }
 
+my $_MAKE_SCHEMA;
+sub _MAKE_SCHEMA{
+  $_MAKE_SCHEMA = 1 if defined $_[1];
+  return $_MAKE_SCHEMA;
+}
 
 sub _generate_CODE {
   my ($class, $args) = @_;
@@ -119,8 +124,9 @@ sub _generate_CODE {
   my $namespace = $args->{namespace};
   my $tables    = $schemas->{$namespace}{tables};
   $schemas->{$namespace}{code} = [];
-
-  push @{$schemas->{$namespace}{code}}, <<"BASE_CLASS";
+  $class->_MAKE_SCHEMA($args->{table} eq '%' || !$args->{table});
+  if($class->_MAKE_SCHEMA){
+    push @{$schemas->{$namespace}{code}}, <<"BASE_CLASS";
 package $namespace; #The schema/base class
 use 5.010001;
 use strict;
@@ -147,8 +153,7 @@ $/=head1 DESCRIPTION
 This is the base class for using table records as plain Perl objects.
 The subclassses are:$/$/=over
 BASE_CLASS
-
-
+}
   foreach my $t (@$tables) {
     my $package =
       $namespace . '::' . (join '', map { ucfirst lc } split /_/, $t->{TABLE_NAME});
@@ -158,7 +163,8 @@ BASE_CLASS
     my $TABLE   = Data::Dumper->Dump([$t->{TABLE_NAME}], ['$TABLE_NAME']);
     my $name_description =
       "A class for $t->{TABLE_TYPE} $t->{TABLE_NAME} in schema $t->{TABLE_SCHEM}";
-    $schemas->{$namespace}{code}[0] .= qq|$/=item L<$package> - $name_description$/|;
+    $schemas->{$namespace}{code}[0] .= qq|$/=item L<$package> - $name_description$/|
+      if $class->_MAKE_SCHEMA;
     push @{$schemas->{$namespace}{code}}, qq|package $package; #A table/row class
 use 5.010001;
 use strict;
@@ -197,7 +203,7 @@ $/=head1 AUTHOR$/$/$ENV{USER}$/$/=cut
 $/$/=head1 SEE ALSO$/$/
 L<$class>, L<DBIx::Simple::Class>, L<DBIx::Simple>, L<Mojolicious::Plugin::DSC>
 $/=head1 AUTHOR$/$/$ENV{USER}$/$/=cut
-|;
+| if $class->_MAKE_SCHEMA;
   if (defined wantarray) {
     if (wantarray) {
       return @{$schemas->{$namespace}{code}};
@@ -255,12 +261,12 @@ sub dump_schema_at {
 
   $schema_path = File::Spec->catdir(@base_path, @namespace);
 
-  if (eval "require $namespace") {
+  if (eval "require $namespace" && $class->_MAKE_SCHEMA) {
     carp( "Module $namespace is already installed at "
         . $INC{join('/', @namespace) . '.pm'}
         . ". Please avoid namespace collisions...");
   }
-  say('Will dump schema at ' . $args->{lib_root});
+  say('Will dump classes at ' . $args->{lib_root});
 
   #We should be able to continue safely now...
   my $tables = $schemas->{$namespace}{tables};
@@ -270,7 +276,7 @@ sub dump_schema_at {
       || carp("Can not make path $schema_path.$/$!. Quitting...") && return;
   }
 
-  if ((!$args->{overwrite} && !-f "$schema_path.pm") || $args->{overwrite}) {
+  if ($class->_MAKE_SCHEMA ||$args->{overwrite}) {
     carp("Overwriting $schema_path.pm...") if $args->{overwrite} && $class->DEBUG;
     my $base_fh = IO::File->new("> $schema_path.pm")
       || Carp::croak("Could not open $schema_path.pm for writing" . $!);
@@ -354,11 +360,11 @@ Class method.
       default: "'TABLE','VIEW'"
 
 Extracts tables' information from the current connection and generates
-Perl classes representing those tabels or views.
+Perl classes representing those tables or/and views.
 If called in list context returns an array with perl code for each package.
 The first package is the base class.
 If called in scalar context returns all the generated code as a string.
-In void context returns C<undefined>.
+
 The generated classes are saved internally and are available for use by
 L</dump_schema_at>.
 This makes it very convenient for quickly prototyping applications

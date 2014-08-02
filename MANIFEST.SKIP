@@ -20,3 +20,4 @@ MYMETA
 cover_db
 pod2htm*.tmp
 \.perltidyrc
+project|workspace$

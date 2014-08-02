@@ -11,7 +11,7 @@ WriteMakefile(
   LICENSE          => 'artistic_2',
   PL_FILES         => {},
   BUILD_REQUIRES   => {
-    'DBD::SQLite'    => '1.29',
+    'DBD::SQLite'    => '1.42',
     'File::Basename' => 0,
     'Cwd'            => 0,
   },

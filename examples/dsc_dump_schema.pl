@@ -13,7 +13,7 @@ GetOptions(
   'u|user=s'        => \my $user,
   'p|password=s'    => \my $password,
   'l|lib_root=s'       => \my $lib,
-  't|table' =>\my $table,
+  't|table=s' =>\my $table,
 );
 pod2usage(verbose=>2) if $help;
 pod2usage(1) unless $dsn;
@@ -28,7 +28,7 @@ DBIx::Simple::Class::Schema->load_schema(
     #return of the do
     join '', map { ucfirst lc } split /_/, $schema_name;
   },
-  table => '%',                 #all tables from the current database
+  table => $table||'%',         # $table or '%' - all tables from the current database
   type  => "'TABLE','VIEW'",    # make classes for tables and views
 );
 
@@ -113,6 +113,8 @@ It will not be created.
 
 This option allows you to specify a table name. In some cases after modifying 
 some table you may need to dump a class only for this table.
+B<Note! In this case the base (schema) class is not generated!>
+Use overwrite option if you want it to be generated too.
 
   #only table users
   -t users

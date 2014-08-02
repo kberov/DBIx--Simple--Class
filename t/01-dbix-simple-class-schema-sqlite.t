@@ -30,7 +30,7 @@ local $SIG{__WARN__} = sub {
     )
   {
     my ($package, $filename, $line, $subroutine) = caller(2);
-    ok($_[0], $subroutine . " warns '$1' OK");
+    ok($_[0], ($subroutine||'') . " warns '$1' OK");
   }
   else {
     warn $_[0];
@@ -171,6 +171,10 @@ isa_ok($DSCS->_schemas('Your::Model'),
 is($DSCS->_schemas('Your::Model')->{tables}[0]->{TABLE_NAME},
   'users', 'first table is "users"');
 is(scalar @{$DSCS->_schemas('Your::Model')->{tables}}, 1, 'the only table is "users"');
+
+my $class_to_file = "$INC[0]/Your/Model.pm";
+ok(!-f $class_to_file ,'schema class is NOT generated - OK');
+
 SKIP: {
   skip "I have only linux, see http://perldoc.perl.org/perlport.html#chmod", 1,
     if $^O !~ /linux/i;
@@ -181,11 +185,6 @@ SKIP: {
 ok($DSCS->dump_schema_at(lib_root => $INC[0]), 'dumps OK');
 File::Path::remove_tree($INC[0] . '/Your');
 
-TODO: {
-  local $TODO = "load_schema, dump_schema_at - not finished";
-
-#load_schema
-}
 
 
 done_testing;
