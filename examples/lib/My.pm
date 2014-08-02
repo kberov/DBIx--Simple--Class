@@ -10,8 +10,8 @@ use utf8;
 
 {
 
-  package #hide
-  My::Collision;
+  package    #hide
+    My::Collision;
   use base qw(My);
 
   use constant TABLE   => 'collision';
@@ -28,8 +28,8 @@ use utf8;
 
 {
 
-  package #hide
-  My::SiteUser;
+  package                              #hide
+    My::SiteUser;
   use base qw(My::User);
   my $_CHECKS = My::User->CHECKS;
   $_CHECKS->{group_id}{default} = 3;

@@ -23,7 +23,8 @@ use DBIx::Simple::Class::Schema;
 my $DSCS = 'DBIx::Simple::Class::Schema';
 my $dbix;
 eval {
-  $dbix = DBIx::Simple->connect('dbi:mysql:database=test;host=127.0.0.1;mysql_enable_utf8=1',
+  $dbix =
+    DBIx::Simple->connect('dbi:mysql:database=test;host=127.0.0.1;mysql_enable_utf8=1',
     '', '');
 }
   or plan skip_all => (
@@ -102,6 +103,7 @@ TAB
 
 ok(my $code = $DSCS->load_schema(namespace => 'Test'), 'scalar context OK');
 ok(my @code = $DSCS->load_schema(namespace => 'Test'), 'list context OK');
+
 #warn Dumper($DSCS->_schemas('Test')->{tables});
 #PARAMS
 delete $DSCS->_schemas->{Test};

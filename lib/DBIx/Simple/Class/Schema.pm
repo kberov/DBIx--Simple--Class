@@ -113,7 +113,8 @@ sub _generate_COLUMNS_ALIASES_CHECKS {
 }
 
 my $_MAKE_SCHEMA;
-sub _MAKE_SCHEMA{
+
+sub _MAKE_SCHEMA {
   $_MAKE_SCHEMA = 1 if defined $_[1];
   return $_MAKE_SCHEMA;
 }
@@ -125,7 +126,7 @@ sub _generate_CODE {
   my $tables    = $schemas->{$namespace}{tables};
   $schemas->{$namespace}{code} = [];
   $class->_MAKE_SCHEMA($args->{table} eq '%' || !$args->{table});
-  if($class->_MAKE_SCHEMA){
+  if ($class->_MAKE_SCHEMA) {
     push @{$schemas->{$namespace}{code}}, <<"BASE_CLASS";
 package $namespace; #The schema/base class
 use 5.010001;
@@ -153,7 +154,7 @@ $/=head1 DESCRIPTION
 This is the base class for using table records as plain Perl objects.
 The subclassses are:$/$/=over
 BASE_CLASS
-}
+  }
   foreach my $t (@$tables) {
     my $package =
       $namespace . '::' . (join '', map { ucfirst lc } split /_/, $t->{TABLE_NAME});
@@ -276,7 +277,7 @@ sub dump_schema_at {
       || carp("Can not make path $schema_path.$/$!. Quitting...") && return;
   }
 
-  if ($class->_MAKE_SCHEMA ||$args->{overwrite}) {
+  if ($class->_MAKE_SCHEMA || $args->{overwrite}) {
     carp("Overwriting $schema_path.pm...") if $args->{overwrite} && $class->DEBUG;
     my $base_fh = IO::File->new("> $schema_path.pm")
       || Carp::croak("Could not open $schema_path.pm for writing" . $!);

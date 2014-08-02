@@ -30,7 +30,7 @@ local $SIG{__WARN__} = sub {
     )
   {
     my ($package, $filename, $line, $subroutine) = caller(2);
-    ok($_[0], ($subroutine||'') . " warns '$1' OK");
+    ok($_[0], ($subroutine || '') . " warns '$1' OK");
   }
   else {
     warn $_[0];
@@ -112,12 +112,12 @@ is((grep { $_ eq 'is_blocked' || $_ eq 'column_data' } values %alaiases),
 
 my %checks =
   (%{$tables->[0]->{CHECKS}}, %{$tables->[1]->{CHECKS}}, %{$tables->[2]->{CHECKS}});
-ok($checks{group_name}{allow}('alaba_anica2'), 'checks VARCHAR(12) works fine');
+ok($checks{group_name}{allow}('alaba_anica2'),   'checks VARCHAR(12) works fine');
 ok(!$checks{group_name}{allow}('alaba_anica13'), 'checks VARCHAR(12) works fine');
 like('1',  qr/$checks{id}->{allow}/, 'checks INT works fine');
 like('11', qr/$checks{id}->{allow}/, 'checks INT works fine');
 unlike('a', qr/$checks{id}->{allow}/, 'checks INT works fine');
-ok($checks{data}{allow}('1'), 'checks TEXT works fine');
+ok($checks{data}{allow}('1'),          'checks TEXT works fine');
 ok($checks{data}{allow}('11sd,asd,a'), 'checks TEXT works fine');
 unlike('', qr/$checks{'is blocked'}{allow}/, 'checks INT works fine');
 like('1', qr/$checks{disabled}->{allow}/, 'checks TINYINT(1) works fine');
@@ -128,12 +128,15 @@ like('11.2',      $checks{balance}->{allow},     'checks DECIMAL(8,2) works fine
 like('123456.20', $checks{balance}->{allow},     'checks DECIMAL(8,2) works fine');
 unlike('1234567.2', $checks{balance}->{allow},     'checks DECIMAL(8,2) works fine');
 unlike('a',         qr/$checks{balance}->{allow}/, 'checks DECIMAL(8,2) works fine');
-like('11',      $checks{dummy_dec}->{allow},     'checks DECIMAL(8,0) works fine');
-unlike('11.2',      $checks{dummy_dec}->{allow},     'checks DECIMAL(8,0) works fine');
+like('11', $checks{dummy_dec}->{allow}, 'checks DECIMAL(8,0) works fine');
+unlike('11.2', $checks{dummy_dec}->{allow}, 'checks DECIMAL(8,0) works fine');
 
-my $nc ='nullable_column';
-is(undef, Params::Check::check({$nc => $checks{$nc}}, {$nc => undef})->{$nc},
-  'checks TEXT DEFAULT NULL works fine');
+my $nc = 'nullable_column';
+is(
+  undef,
+  Params::Check::check({$nc => $checks{$nc}}, {$nc => undef})->{$nc},
+  'checks TEXT DEFAULT NULL works fine'
+);
 
 ok((eval {$code}), 'code generated ok') or diag($@);
 ok($DSCS->dump_schema_at(), 'dump_schema_at dumps code to files OK');
@@ -173,7 +176,7 @@ is($DSCS->_schemas('Your::Model')->{tables}[0]->{TABLE_NAME},
 is(scalar @{$DSCS->_schemas('Your::Model')->{tables}}, 1, 'the only table is "users"');
 
 my $class_to_file = "$INC[0]/Your/Model.pm";
-ok(!-f $class_to_file ,'schema class is NOT generated - OK');
+ok(!-f $class_to_file, 'schema class is NOT generated - OK');
 
 SKIP: {
   skip "I have only linux, see http://perldoc.perl.org/perlport.html#chmod", 1,
@@ -184,7 +187,6 @@ SKIP: {
 }
 ok($DSCS->dump_schema_at(lib_root => $INC[0]), 'dumps OK');
 File::Path::remove_tree($INC[0] . '/Your');
-
 
 
 done_testing;

@@ -1,5 +1,5 @@
-package #hide
-My::Groups;
+package    #hide
+  My::Groups;
 use strict;
 use warnings;
 use utf8;

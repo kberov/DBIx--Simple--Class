@@ -35,7 +35,8 @@ my $DSC = 'DBIx::Simple::Class';
 
 my $dbix;
 eval {
-  $dbix = DBIx::Simple->connect('dbi:mysql:database=test;host=127.0.0.1;mysql_enable_utf8=1',
+  $dbix =
+    DBIx::Simple->connect('dbi:mysql:database=test;host=127.0.0.1;mysql_enable_utf8=1',
     '', '');
 }
   or plan skip_all => (

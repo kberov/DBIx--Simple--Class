@@ -1,5 +1,5 @@
-package #hide
- My::Group;
+package    #hide
+  My::Group;
 use base qw(My);
 use strict;
 use warnings;
