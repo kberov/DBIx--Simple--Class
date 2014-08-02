@@ -489,8 +489,8 @@ It's easy.
   use base qw(DBIx::Simple::Class);
   
   sub delete {
-    my $pk = $self->PRIMARY_KEY;
     my $self = shift;
+    my $pk = $self->PRIMARY_KEY;
     $self->dbix->query('DELETE FROM '.$self->TABLE." WHERE $pk=?", $self->$pk);
   }
   #...
