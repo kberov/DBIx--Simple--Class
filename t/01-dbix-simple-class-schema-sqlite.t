@@ -166,10 +166,11 @@ unlink($INC[0] . '/DSCS/Memory.pm');
 
 #PARAMS
 delete $DSCS->_schemas->{Memory};
-$DSCS->load_schema(namespace => 'Your::Model', table => '%user%', type => "'TABLE'")
+$DSCS->load_schema(namespace => 'Your::Model', table => 'user%', type => "'TABLE'")
   ;    #void context ok
 isa_ok($DSCS->_schemas('Your::Model'),
   'HASH', 'load_schema creates Your::Model namespace OK');
+is(scalar @{$DSCS->_schemas('Your::Model')->{code}}, 1, 'only one piece of code - ok');
 
 is($DSCS->_schemas('Your::Model')->{tables}[0]->{TABLE_NAME},
   'users', 'first table is "users"');
@@ -177,6 +178,9 @@ is(scalar @{$DSCS->_schemas('Your::Model')->{tables}}, 1, 'the only table is "us
 
 my $class_to_file = "$INC[0]/Your/Model.pm";
 ok(!-f $class_to_file, 'schema class is NOT generated - OK');
+my $class_code =
+  $DSCS->load_schema(namespace => 'Your::Model', table => 'users', type => "'TABLE'");
+unlike($class_code, qr/package\s+Your\:\:Model\;/x, 'No schema class generated - ok2');
 
 SKIP: {
   skip "I have only linux and mac, see http://perldoc.perl.org/perlport.html#chmod", 1,

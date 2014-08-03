@@ -1,5 +1,10 @@
 Revision history for DBIx::Simple::Class
 
+1.008 2014-08-03
+        - Fixed logical error in decision to generate the base class or not.
+        - Improved documentation.
+        - Improved tests.
+
 1.007 2014-08-02 21:06:20 CEST
         - Schema/base class is generated and dumped only if
           "table" argument is not specified or is '%'.

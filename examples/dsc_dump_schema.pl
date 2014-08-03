@@ -113,8 +113,7 @@ It will not be created.
 
 This option allows you to specify a table name. In some cases after modifying 
 some table you may need to dump a class only for this table.
-B<Note! In this case the base (schema) class is not generated!>
-Use overwrite option if you want it to be generated too.
+B<Note! When a table is specified the base (schema) class is not generated!>
 
   #only table users
   -t users

@@ -115,7 +115,7 @@ sub _generate_COLUMNS_ALIASES_CHECKS {
 my $_MAKE_SCHEMA;
 
 sub _MAKE_SCHEMA {
-  $_MAKE_SCHEMA = 1 if defined $_[1];
+  $_MAKE_SCHEMA = $_[1] if defined $_[1];
   return $_MAKE_SCHEMA;
 }
 
@@ -125,7 +125,6 @@ sub _generate_CODE {
   my $namespace = $args->{namespace};
   my $tables    = $schemas->{$namespace}{tables};
   $schemas->{$namespace}{code} = [];
-  $class->_MAKE_SCHEMA($args->{table} eq '%' || !$args->{table});
   if ($class->_MAKE_SCHEMA) {
     push @{$schemas->{$namespace}{code}}, <<"BASE_CLASS";
 package $namespace; #The schema/base class
@@ -235,6 +234,7 @@ sub load_schema {
 
   #generate COLUMNS, ALIASES, CHECKS
   $class->_generate_COLUMNS_ALIASES_CHECKS($tables);
+  $class->_MAKE_SCHEMA(($args->{table} eq '%') or (not $args->{table}));
 
   #generate code
   if (wantarray) {
@@ -277,7 +277,7 @@ sub dump_schema_at {
       || carp("Can not make path $schema_path.$/$!. Quitting...") && return;
   }
 
-  if ($class->_MAKE_SCHEMA || $args->{overwrite}) {
+  if ($class->_MAKE_SCHEMA) {
     carp("Overwriting $schema_path.pm...") if $args->{overwrite} && $class->DEBUG;
     my $base_fh = IO::File->new("> $schema_path.pm")
       || Carp::croak("Could not open $schema_path.pm for writing" . $!);
@@ -363,7 +363,7 @@ Class method.
 Extracts tables' information from the current connection and generates
 Perl classes representing those tables or/and views.
 If called in list context returns an array with perl code for each package.
-The first package is the base class.
+The first package is the base class. The base class is generated only the argument C<table> is '%' or empty.
 If called in scalar context returns all the generated code as a string.
 
 The generated classes are saved internally and are available for use by
@@ -398,23 +398,30 @@ Does several checks:
 
 =over
 
-=item 1
+=item *
 
 Checks if a file with the name of your base class exists and exits
 if the flag C<overwrite> is not set.
 
-=item 2
+=item *
+
+The base class is dumped to disk only if the argument C<table> is '%' or empty.
+It was not generated in L</load_schema>. 
+In other words base/schema class is generated when no specific table class is 
+required to be generated. This is convinient if you want to generate only specific table-classes and use them on-the-fly without dumping them to disk.
+
+=item *
 
 Checks if there is a module with the same name as your base class installed
-and exits if there is such module. This is done to avoid namespace collisions.
+and warns if there is such module. This is done to avoid namespace collisions.
 
-=item 3
+=item *
 
 Checks if the files can be written to disk and exit immediately if there is a problem.
 
 =back
 
-For every check above issues the system warning so you, the developer, can decide what to do.
+For every check above issues a warning so you, the developer, can decide what to do.
 Returns true on success.
 
 =head1 SUPPORTED DATABASE DRIVERS
