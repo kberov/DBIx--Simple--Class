@@ -1,5 +1,8 @@
 Revision history for DBIx::Simple::Class
 
+1.009 2015-03-07
+    - Small optimizations.
+
 1.008 2014-08-03
         - Fixed logical error in decision to generate the base class or not.
         - Improved documentation.

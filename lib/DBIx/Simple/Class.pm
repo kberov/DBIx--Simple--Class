@@ -6,7 +6,7 @@ use Carp;
 use Params::Check;
 use DBIx::Simple;
 
-our $VERSION = '1.008';
+our $VERSION = '1.009';
 
 
 #CONSTANTS
@@ -146,8 +146,7 @@ $SQL = {
 
 # generate(d) limit clause
 sub SQL_LIMIT {
-  my $_LIMIT = $SQL->{_LIMIT};
-  return $_LIMIT->(@_);
+  return $SQL->{_LIMIT}->(@_);
 }
 
 sub SQL {
