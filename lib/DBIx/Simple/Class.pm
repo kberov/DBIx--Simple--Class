@@ -140,7 +140,9 @@ $SQL = {
 #works for MySQL, SQLite, PostgreSQL
 #TODO:See SQL::Abstract::Limit for other implementations
 #and implement it using this technique.
-    " LIMIT $_[1]" . ($_[2] ? " OFFSET $_[2] " : '');
+croak('SQL LIMIT requires at least one integer parameter or placeholder')
+  unless defined($_[1]);
+  return " LIMIT $_[1]" . (defined($_[2]) ? " OFFSET $_[2] " : '');
   },
 };
 
