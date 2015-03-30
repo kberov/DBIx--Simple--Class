@@ -453,11 +453,11 @@ You are supposed to write your own business-specific checks.
 =head1 SEE ALSO
 
 L<DBIx::Simple::Class>, L<DBIx::Simple>, L<DBIx::Class::Schema::Loader>,
-L<Mojolicious::Plugin::DSC>
+L<Mojolicious::Plugin::DSC>, L<Ado>
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright 2012-2013 Красимир Беров (Krasimir Berov).
+Copyright 2012-2015 Красимир Беров (Krasimir Berov).
 
 This program is free software, you can redistribute it and/or modify it under
 the terms of the Artistic License version 2.0.

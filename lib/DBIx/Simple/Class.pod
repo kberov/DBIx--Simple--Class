@@ -647,9 +647,11 @@ with this distribution.
 To use the functionalities provided by this distribution
 in a L<Mojolicious> application try L<Mojolicious::Plugin::DSC>.
 
+For various examples of usage see  L<Ado>.
+
 =head1 LICENSE AND COPYRIGHT
 
-Copyright 2012 - 2013 Красимир Беров (Krasimir Berov).
+Copyright 2012 - 2015 Красимир Беров (Krasimir Berov).
 
 This program is free software, you can redistribute it and/or modify it under
 the terms of the Artistic License version 2.0.

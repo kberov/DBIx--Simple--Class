@@ -52,7 +52,7 @@ dsc_dump_schema.pl - script to dump a schema from a database
   -u me -p mypassword --overwrite 1 --lib_root ./lib
 
   #dump only the "users" table - using short options and choosing a namespace
-  dsc_dump_schema.pl -dsn dbi:SQLite:database=etc/ado.sqlite -n Ado::Model -l lib -t users
+  dsc_dump_schema.pl --dsn dbi:SQLite:database=etc/ado.sqlite -n Ado::Model -l lib -t users
   
   dsc_dump_schema.pl -? #for more help
   
@@ -125,11 +125,11 @@ B<Note! When a table is specified the base (schema) class is not generated!>
 
 L<DBIx::Simple::Class>, L<DBIx::Simple>, 
 L<DBIx::Simple::Class::Schema>,
-L<Mojolicious::Plugin::DSC>
+L<Mojolicious::Plugin::DSC>, L<Ado>
 
 =head1 LICENSE AND COPYRIGHT
 
-Copyright 2013 Красимир Беров (Krasimir Berov).
+Copyright 2013-2015 Красимир Беров (Krasimir Berov).
 
 This program is free software, you can redistribute it and/or modify it under
 the terms of the Artistic License version 2.0.
