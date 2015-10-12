@@ -20,4 +20,5 @@ MYMETA
 cover_db
 pod2htm*.tmp
 \.perltidyrc
+\.perlcritic-history
 project|workspace$

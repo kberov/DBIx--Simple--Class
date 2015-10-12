@@ -15,6 +15,7 @@ Makefile.PL
 MANIFEST
 MANIFEST.SKIP
 README
+t/.perlcriticrc
 t/00-common.t
 t/01-dbix-simple-class-schema-mysql.t
 t/01-dbix-simple-class-schema-sqlite.t
@@ -24,3 +25,4 @@ t/boilerplate.t
 t/manifest.t
 t/pod-coverage.t
 t/pod.t
+t/progressive-critic.t
