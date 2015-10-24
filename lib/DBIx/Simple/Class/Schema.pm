@@ -2,7 +2,7 @@ package DBIx::Simple::Class::Schema;
 use strict;
 use warnings;
 use 5.010001;
-use Carp;
+use Carp qw( carp croak );
 use Data::Dumper;
 use parent 'DBIx::Simple::Class';
 
@@ -23,7 +23,7 @@ sub _schemas {
 sub _get_table_info {
   my ($class, $args) = _get_obj_args(@_);
 
-  $args->{namespace} || Carp::croak('Please pass "namespace" argument');
+  $args->{namespace} || croak('Please pass "namespace" argument');
 
   #get tables from the current database
   #see https://metacpan.org/module/DBI#table_info
@@ -141,7 +141,7 @@ sub dbix {
   # Singleton DBIx::Simple instance
   state \$DBIx;
   return (\$_[1] ? (\$DBIx = \$_[1]) : \$DBIx)
-    || Carp::croak('DBIx::Simple is not instantiated. Please first do '
+    || croak('DBIx::Simple is not instantiated. Please first do '
       . \$_[0]
       . '->dbix(DBIx::Simple->connect(\$DSN,\$u,\$p,{...})');
 }
@@ -252,7 +252,7 @@ sub dump_schema_at {
   #_generate_CODE() should be called by now
   #we always have only one key
   $namespace = (keys %$schemas)[0]
-    || Carp::croak('Please first call ' . __PACKAGE__ . '->load_schema()!');
+    || croak('Please first call ' . __PACKAGE__ . '->load_schema()!');
 
   require File::Path;
   require File::Spec;
@@ -280,7 +280,7 @@ sub dump_schema_at {
   if ($class->_MAKE_SCHEMA) {
     carp("Overwriting $schema_path.pm...") if $args->{overwrite} && $class->DEBUG;
     my $base_fh = IO::File->new("> $schema_path.pm")
-      || Carp::croak("Could not open $schema_path.pm for writing" . $!);
+      || croak("Could not open $schema_path.pm for writing" . $!);
     print $base_fh $code->[0];
     $base_fh->close;
   }
