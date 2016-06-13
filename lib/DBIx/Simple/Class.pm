@@ -115,7 +115,7 @@ $SQL = {
     return $SQL_CACHE->{$class}{UPDATE} ||= do {
       my $pk = $class->PRIMARY_KEY;
 
-      #do we always update all columns?!?! Yes, if we always retreive all columns.
+      #do we always update all columns?!?! Yes, if we always retrieve all columns.
       my $SET = join(', ', map {qq($/$_=?)} @{$class->COLUMNS});
       'UPDATE ' . $class->TABLE . " SET $SET WHERE $pk=%s";
       }

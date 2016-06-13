@@ -431,7 +431,7 @@ uses only functionality specified by L<DBI>.
 This means that if a driver implements the methods specifyed in L<DBI> it is supported.
 However currently only tests for L<DBD::SQLite> and L<DBD::mysql> are written.
 Feel free to contribute with tests for your prefered driver.
-The following methods are used to retreive information form the database:
+The following methods are used to retrieve information form the database:
 
 =over
 
