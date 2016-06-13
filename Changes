@@ -224,7 +224,7 @@ Revision history for DBIx::Simple::Class
         - Added support for column aliases to be used as methods.
         - Improved documentation.
 0.52    2012-02-15 16:53:50 EET
-        - Switched to maually mantained Changes file.
+        - Switched to maually maintained Changes file.
         - Improved documentation yet more.
         - Implemented query() method.
         - Improved _make_field_attrs() to check for reserved column names.
